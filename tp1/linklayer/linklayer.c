@@ -3,9 +3,25 @@
 #include "receiver_state_machine.h"
 #include "transmitter_state_machine.h"
 
-static int trasmitter_open(int fd);
+static int transmitter_open(int fd);
 static int receiver_open(int fd);
 static int serial_port_setup(int port);
+static void build_su_frame(uint8_t * buf, int address, int control);
+
+typedef struct linklayer {
+
+  char port[20];
+  int baudRate;
+  unsigned int sequenceNumber;
+  unsigned int timeout;
+  unsigned int numTransmissions;
+  bool connectionEstablished;
+
+  uint8_t frame[2];
+}linklayer_info;
+
+linklayer_info connection_info; 
+
 
 static struct termios oldtio;
 volatile int STOP = false;
@@ -23,37 +39,27 @@ int sendUA(int fd)
 {
 
   uint8_t response[SU_FRAME_SIZE];
-  response[0] = FLAG;
-  response[1] = ADDR_RECEIV_RES;
-  response[2] = CONTROL_UA;
-  response[3] = response[1] ^ response[2];
-  response[4] = FLAG;
+  build_su_frame(&response, ADDR_RECEIV_RES, CONTROL_UA);
 
   int res = write(fd, response, SU_FRAME_SIZE);
-  log_debug("RECEIVER: UA sent to trasmitter(%x %x %x %x %x) (%d bytes written)\n",response[0],response[1],response[2],response[3],response[4], res);
+  log_debug("RECEIVER: UA sent to transmitter(%x %x %x %x %x) (%d bytes written)\n",response[0],response[1],response[2],response[3],response[4], res);
 
   return 0;
 }
 
 int sendAck(int fd, bool type, int sequence_no)
 {
-
   uint8_t sequence_byte = sequence_no ? 0x80 : 0x00;
   uint8_t control_byte = type ? (CONTROL_RR_BASE | sequence_byte) : (CONTROL_REJ_BASE | sequence_byte);
   uint8_t response[SU_FRAME_SIZE];
 
-  response[0] = FLAG;
-  response[1] = ADDR_RECEIV_RES;
-  response[2] = control_byte;
-  response[3] = response[1] ^ response[2];
-  response[4] = FLAG;
-
+  build_su_frame(&response, ADDR_RECEIV_RES, control_byte);
   int res = write(fd, response, SU_FRAME_SIZE);
 
   if (type)
-    log_debug("RECEIVER: ACK(%d) sent to trasmitter(%x %x %x %x %x) (%d bytes written)\n", sequence_no,response[0],response[1],response[2],response[3],response[4], res);
+    log_debug("RECEIVER: ACK(%d) sent to transmitter(%x %x %x %x %x) (%d bytes written)\n", sequence_no,response[0],response[1],response[2],response[3],response[4], res);
   else
-    log_debug("RECEIVER: NACK(%d) sent to trasmitter(%x %x %x %x %x) (%d bytes written)\n", sequence_no,response[0],response[1],response[2],response[3],response[4], res);
+    log_debug("RECEIVER: NACK(%d) sent to transmitter(%x %x %x %x %x) (%d bytes written)\n", sequence_no,response[0],response[1],response[2],response[3],response[4], res);
 
     return 0;
 }
@@ -73,27 +79,12 @@ bool valid_data_bcc(uint8_t frame[], size_t frame_size)
   return bcc_value == calculated_value;
 }
 
-
-typedef struct linklayer {
-
-  char port[20];
-  int baudRate;
-  unsigned int sequenceNumber;
-  unsigned int timeout;
-  unsigned int numTransmissions;
-  bool connectionEstablished;
-
-  uint8_t frame[2];
-}linklayer_info;
-
-linklayer_info connection_info; 
-
 int llopen(int port, int flag) {
   int fd = serial_port_setup(port);
 
   switch (flag) {
     case TRANSMITTER:
-      return trasmitter_open(fd);
+      return transmitter_open(fd);
     case RECEIVER:
       return receiver_open(fd);
     default:
@@ -154,55 +145,6 @@ int serial_port_setup(int port) {
   return fd;
 }
 
-int trasmitter_open(int fd) {
-  printf("-Establishing connection...\n");
-
-  // Frame building
-  uint8_t frame_set[SU_FRAME_SIZE];
-  frame_set[0] = FLAG;
-  frame_set[1] = ADDR_TRANSM_COMMAND;
-  frame_set[2] = CONTROL_SET;
-  frame_set[3] = frame_set[1] ^ frame_set[2];
-  frame_set[4] = FLAG;
-
-  //Alarm setup
-  struct sigaction alarm_action;
-  alarm_action.sa_handler = alarm_handler;
-  sigaction(SIGALRM, &alarm_action, NULL);
-
-  int res;
-
-  // State-machine setup
-  struct transmitter_state_machine st_machine;
-
-  while (conta < 4) {
-     if (flag) {
-        st_machine.currentState = T_STATE_START;
-        res = write(fd, frame_set, SU_FRAME_SIZE);
-        printf("-SET message sent to Receiver(%d bytes written)\n", res);
-        alarm(3);                 // activates 3 sec alarm
-        flag=0;
-        tcflush(fd, TCIOFLUSH);
-
-        // wait for answer
-        while (! flag && STOP==false) {
-
-          uint8_t currentByte;
-          res = read(fd,&currentByte,1);                              // returns after a char has been read or after timer expired
-          printf("-Byte received from Receiver(0x%x)\n", currentByte);
-          tsm_process_input(&st_machine,currentByte);                   // state-machine processes the read byte
-
-          if (st_machine.currentState == T_STATE_STOP) {
-              STOP=true;
-              alarm(0);
-              return fd;
-          }
-        }
-     }
-  }
-
-  return -1;
-}
 
 int receiver_open(int fd) {
 
@@ -387,4 +329,13 @@ int llread(int fd, char* buffer){
       }
     }
   }
+}
+
+
+void build_su_frame(uint8_t * buf, int address, int control) {
+  buf[0] = FLAG;
+  buf[1] = address;
+  buf[2] = control;
+  buf[3] = address ^ control;
+  buf[4] = FLAG;
 }
