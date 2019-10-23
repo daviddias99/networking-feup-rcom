@@ -7,9 +7,6 @@
 
 #define MAX_PACKET_SIZE_B           4
 
-// Control Packet Type Macros
-#define CTRLP_FILE_SIZE             0
-#define CTRLP_FILE_NAME             1
 
 
 typedef struct tl_package {

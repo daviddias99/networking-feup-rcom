@@ -62,7 +62,7 @@ int calculate_arguments_size(char* arguments[], int argument_cnt) {
                 result += sizeof(int);
                 break;
             
-            case CTRLP_FILE_NAME:
+            case FILE_NAME:
                 result += sizeof(char) * strlen(arguments[i + 1]);
                 break;
 
@@ -87,7 +87,7 @@ int buildControlPacket(uint8_t* packet, char* arguments[], int argument_cnt) {
         currentIndex++;
 
         switch (type) {
-            case CTRLP_FILE_SIZE:
+            case FILE_SIZE:
             {
                 packet[currentIndex] = sizeof(int);
                 // TODO: remove this print
@@ -100,7 +100,7 @@ int buildControlPacket(uint8_t* packet, char* arguments[], int argument_cnt) {
                 currentIndex += sizeof(int);
                 break;
             }
-            case CTRLP_FILE_NAME: 
+            case FILE_NAME: 
             {
                 int length = sizeof(char) * strlen(arguments[i + 1]);
                 packet[currentIndex] = length;
