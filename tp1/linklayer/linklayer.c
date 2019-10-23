@@ -284,8 +284,6 @@ int llwrite(int fd, char * buffer, int length) {
         alarm(3);                 // activates 3 sec alarm
         flag = 0;
         STOP = false;
-        tcflush(fd, TCIOFLUSH);
-
         // wait for answer
         while (!flag && STOP == false) {
 
