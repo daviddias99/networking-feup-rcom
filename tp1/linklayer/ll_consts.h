@@ -25,3 +25,5 @@
 
 #define ESC	0x7d
 #define ESC_XOR 0x20
+
+#define BIT(n)                (0x01<<(n))
