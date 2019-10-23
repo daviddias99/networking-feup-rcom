@@ -312,7 +312,7 @@ int llwrite(int fd, char * buffer, int length) {
               printf("test with %x\n", ((sequence_number  + 1)<< 7) | CONTROL_RR_BASE);
 
               //TODO: do this
-              if (st_machine.frame[2] == ((sequence_number + 1) << 7) | CONTROL_RR_BASE) {
+              if (st_machine.frame[2] == (((sequence_number + 1) << 7) | CONTROL_RR_BASE)) {
                 printf("entrou no if\n");
                 alarm(0);
                 sequence_number = (sequence_number + 1) % 2;

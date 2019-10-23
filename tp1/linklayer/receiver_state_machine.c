@@ -117,20 +117,6 @@ void sm_i_data_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uin
     }
 
     st_machine->frame[st_machine->currentByte_idx] = receivedByte;
-
-    // BCC2 checking should not be done by the state machine
-
-    // bool isDataBCCValid = valid_data_bcc(st_machine->frame, st_machine->currentByte_idx + 1); // calculate the data bcc
-
-    // if (v)
-    // {
-    //   st_machine->currentState = R_STATE_I_STOP;
-    // }
-    // else
-    // {
-    //   st_machine->currentState = R_STATE_START;
-    // }
-
     st_machine->currentState = R_STATE_I_STOP;
   }
   else
@@ -217,58 +203,20 @@ void sm_i_state_stop_st_handler(struct su_frame_rcv_state_machine *st_machine, u
   return;
 }
 
+static void (*rcv_event_handlers[])(struct su_frame_rcv_state_machine *, uint8_t) = {
+                                                              sm_start_st_handler,
+                                                              sm_flag_st_handler,
+                                                              sm_a_rcv_st_handler,
+                                                              sm_su_c_rcv_st_handler,
+                                                              sm_su_bcc1_st_handler,
+                                                              sm_i_c_rcv_st_handler,
+                                                              sm_i_data_rcv_st_handler,
+                                                              sm_esc_found_st_handler,
+                                                              sm_su_state_stop_st_handler,
+                                                              sm_i_state_stop_st_handler};
+
 void sm_processInput(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
 {
+   (*rcv_event_handlers[st_machine->currentState])(st_machine,receivedByte);
 
-  switch (st_machine->currentState)
-  {
-
-  case R_STATE_START:
-
-    sm_start_st_handler(st_machine, receivedByte);
-    return;
-
-  case R_STATE_FLAG_RCV:
-
-    sm_flag_st_handler(st_machine, receivedByte);
-    return;
-
-  case R_STATE_A_RCV:
-
-    sm_a_rcv_st_handler(st_machine, receivedByte);
-    return;
-
-  case R_STATE_I_C_RCV:
-
-    sm_i_c_rcv_st_handler(st_machine, receivedByte);
-    return;
-
-  case R_STATE_I_DATA_RCV:
-
-    sm_i_data_rcv_st_handler(st_machine, receivedByte);
-    return;
-
-  case R_STATE_ESCAPE_FOUND:
-
-    sm_esc_found_st_handler(st_machine, receivedByte);
-    return;
-
-  case R_STATE_SU_C_RCV:
-
-    sm_su_c_rcv_st_handler(st_machine, receivedByte);
-    return;
-
-  case R_STATE_SU_BCC1_OK:
-
-    sm_su_bcc1_st_handler(st_machine, receivedByte);
-    return;
-
-  case R_STATE_SU_STOP:
-
-    sm_su_state_stop_st_handler(st_machine,receivedByte);
-    return;
-
-  case R_STATE_I_STOP:
-    sm_i_state_stop_st_handler(st_machine, receivedByte);
-  }
 }
