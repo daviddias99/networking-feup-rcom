@@ -5,13 +5,17 @@
 void sm_start_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
 {
 
-  log_debug("STM: At start state");
+  
 
   if (receivedByte == FLAG)
   {
     st_machine->currentState = R_STATE_FLAG_RCV;
     st_machine->frame[FLAG_START_INDEX] = receivedByte;
+    log_debug("STM: At start state --> At flag state");
+    return;
   }
+
+  log_debug("STM: At start state --> At start state");
 
   return;
 }
@@ -19,26 +23,27 @@ void sm_start_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t 
 void sm_flag_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
 {
 
-  log_debug("STM: At flag state");
-
   if (receivedByte == ADDR_TRANSM_COMMAND)
   {
-
     st_machine->currentState = R_STATE_A_RCV;
     st_machine->frame[ADDR_INDEX] = receivedByte;
+    log_debug("STM: At flag state --> At A state");
   }
-  else if (receivedByte == FLAG)
-    return;
-  else
-    st_machine->currentState = R_STATE_START;
+  else if (receivedByte == FLAG){
 
+    log_debug("STM: At flag state --> At flag state");
+  }
+  else{
+
+    st_machine->currentState = R_STATE_START;
+    log_debug("STM: At flag state --> At start state");
+  }
+  
   return;
 }
 
 void sm_a_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
 {
-
-  log_debug("STM: At A state");
 
   if (receivedByte == CONTROL_SET)
   { // if the received command is to establish a communication (S or U)
@@ -46,17 +51,26 @@ void sm_a_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t 
     st_machine->currentState = R_STATE_SU_C_RCV;
     st_machine->frame[CTRL_INDEX] = receivedByte;
     st_machine->connectionEstablished = false;
+
+    log_debug("STM: At A state --> At SU C RCV state");
   }
-  else if (receivedByte == FLAG)
+  else if (receivedByte == FLAG){
+
     st_machine->currentState = R_STATE_FLAG_RCV;
+    log_debug("STM: At A state --> At flag state");
+  }
   else if (((receivedByte == 0x00) || (receivedByte == 0x40)) && (st_machine->connectionEstablished))
   { // if the received command is to receive data (I)
     st_machine->frame[CTRL_INDEX] = receivedByte;
     st_machine->currentState = R_STATE_I_C_RCV;
+    log_debug("STM: At A state --> At I C RCV state");
   }
-  else
-    st_machine->currentState = R_STATE_START;
+  else{
 
+    st_machine->currentState = R_STATE_START;
+    log_debug("STM: At A state --> At start state");
+  }
+  
   return;
 }
 
@@ -80,19 +94,23 @@ void sm_su_c_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8
 void sm_i_c_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
 {
 
-  log_debug("STM: At I C RCV state");
-
   if (receivedByte == (st_machine->frame[CTRL_INDEX] ^ st_machine->frame[ADDR_INDEX]))
   { // check the first BCC
-    log_debug("STM: Correct header bcc");
     st_machine->currentState = R_STATE_I_DATA_RCV;
     st_machine->frame[BCC_INDEX] = receivedByte;
-    st_machine->currentByte_idx = 4;
+    st_machine->currentByte_idx = I_FRAME_DATA_START_INDEX;
+    log_debug("STM: At I C RCV state --> At Data RCV state (correct header bcc)");
   }
-  else if (receivedByte == FLAG)
+  else if (receivedByte == FLAG){
+
     st_machine->currentState = R_STATE_FLAG_RCV;
-  else
+    log_debug("STM: At I C RCV state --> At flag state");
+  }
+  else{
+
     st_machine->currentState = R_STATE_START;
+    log_debug("STM: At I C RCV state --> At start state");
+  }
 
   return;
 }
@@ -100,12 +118,11 @@ void sm_i_c_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_
 void sm_i_data_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
 {
 
-  log_debug("STM: At Data RCV state");
-
   if (receivedByte == 0x7d)
   { // escape character must be converted to original chararacter
 
     st_machine->currentState = R_STATE_ESCAPE_FOUND;
+    log_debug("STM: At Data RCV state --> At ESCAPE CODE Found state");
   }
   else if (receivedByte == FLAG)
   { // end of the frame. This means the previous byte was the BCC of the data and must be checked
@@ -113,30 +130,19 @@ void sm_i_data_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uin
     if(st_machine->currentByte_idx < 6){    // the end flag was received but no bcc and or data was received
 
       st_machine->currentState = R_STATE_START;
+      log_debug("STM: At Data RCV state --> At start state (flag received, but no bcc or data)");
       return;
     }
 
     st_machine->frame[st_machine->currentByte_idx] = receivedByte;
-
-    // BCC2 checking should not be done by the state machine
-
-    // bool isDataBCCValid = valid_data_bcc(st_machine->frame, st_machine->currentByte_idx + 1); // calculate the data bcc
-
-    // if (v)
-    // {
-    //   st_machine->currentState = R_STATE_I_STOP;
-    // }
-    // else
-    // {
-    //   st_machine->currentState = R_STATE_START;
-    // }
-
     st_machine->currentState = R_STATE_I_STOP;
+    log_debug("STM: At Data RCV state --> At I stop state");
   }
   else
   {
     st_machine->frame[st_machine->currentByte_idx] = receivedByte; // normal data byte
     st_machine->currentByte_idx++;
+    log_debug("STM: At Data RCV state --> At Data RCV state");
   }
 
   return;
@@ -145,7 +151,6 @@ void sm_i_data_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uin
 void sm_esc_found_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
 {
 
-  log_debug("STM: At ESCAPE Code Found state");
 
   if (receivedByte == 0x5d)
   {
@@ -153,16 +158,20 @@ void sm_esc_found_st_handler(struct su_frame_rcv_state_machine *st_machine, uint
     st_machine->frame[st_machine->currentByte_idx] = 0x7d; // parse escape byte
     st_machine->currentByte_idx++;
     st_machine->currentState = R_STATE_I_DATA_RCV;
+
+    log_debug("STM: At ESCAPE Code Found state --> At Data Receive State (escape code parsed)");
   }
   else if (receivedByte == 0x5e)
   {
     st_machine->frame[st_machine->currentByte_idx] = 0x7e; // parse flag byte
     st_machine->currentByte_idx++;
     st_machine->currentState = R_STATE_I_DATA_RCV;
+    log_debug("STM: At ESCAPE Code Found state --> At Data Receive State (flag parsed)");
   }
   else
   {
     st_machine->currentState = R_STATE_START;
+    log_debug("STM: At ESCAPE Code Found state --> At Start state");
   }
 
   return;
@@ -171,16 +180,19 @@ void sm_esc_found_st_handler(struct su_frame_rcv_state_machine *st_machine, uint
 void sm_su_bcc1_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
 {
 
-  log_debug("STM: At SU_bcc1 state");
+  
   if (receivedByte == FLAG)
   {
 
     st_machine->currentState = R_STATE_SU_STOP;
     st_machine->frame[FLAG_END_INDEX] = receivedByte;
     st_machine->connectionEstablished = true;
+    log_debug("STM: At SU_bcc1 state --> At SU Stop state");
   }
-  else
+  else{
     st_machine->currentState = R_STATE_START;
+    log_debug("STM: At SU_bcc1 state --> At start state");
+  }
 
   return;
 }
@@ -188,15 +200,19 @@ void sm_su_bcc1_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_
 void sm_su_state_stop_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
 {
 
-  log_debug("STM: At SU stop state");
+
   if (receivedByte == FLAG)
   {
-
     st_machine->currentState = R_STATE_FLAG_RCV;
     st_machine->frame[FLAG_END_INDEX] = receivedByte;
+    log_debug("STM: At SU stop state --> At flag state");
   }
-  else
+  else{
+
     st_machine->currentState = R_STATE_START;
+    log_debug("STM: At SU stop state --> At start state ");
+  }
+
 
   return;
 }
@@ -204,71 +220,38 @@ void sm_su_state_stop_st_handler(struct su_frame_rcv_state_machine *st_machine, 
 void sm_i_state_stop_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
 {
 
-  log_debug("STM: At I stop state");
+  
   if (receivedByte == FLAG)
   {
 
     st_machine->currentState = R_STATE_FLAG_RCV;
     st_machine->frame[FLAG_END_INDEX] = receivedByte;
-  }
-  else
-    st_machine->currentState = R_STATE_START;
 
+    log_debug("STM: At I stop state --> At flag state");
+  }
+  else{
+
+    st_machine->currentState = R_STATE_START;
+    log_debug("STM: AtI stop state --> At start state");
+  }
+    
   return;
 }
 
+static void (*rcv_event_handlers[])(struct su_frame_rcv_state_machine *, uint8_t) = {
+                                                              sm_start_st_handler,
+                                                              sm_flag_st_handler,
+                                                              sm_a_rcv_st_handler,
+                                                              sm_su_c_rcv_st_handler,
+                                                              sm_su_bcc1_st_handler,
+                                                              sm_i_c_rcv_st_handler,
+                                                              sm_i_data_rcv_st_handler,
+                                                              sm_esc_found_st_handler,
+                                                              sm_su_state_stop_st_handler,
+                                                              sm_i_state_stop_st_handler};
+
 void sm_processInput(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
 {
+   (*rcv_event_handlers[st_machine->currentState])(st_machine,receivedByte);
 
-  switch (st_machine->currentState)
-  {
-
-  case R_STATE_START:
-
-    sm_start_st_handler(st_machine, receivedByte);
-    return;
-
-  case R_STATE_FLAG_RCV:
-
-    sm_flag_st_handler(st_machine, receivedByte);
-    return;
-
-  case R_STATE_A_RCV:
-
-    sm_a_rcv_st_handler(st_machine, receivedByte);
-    return;
-
-  case R_STATE_I_C_RCV:
-
-    sm_i_c_rcv_st_handler(st_machine, receivedByte);
-    return;
-
-  case R_STATE_I_DATA_RCV:
-
-    sm_i_data_rcv_st_handler(st_machine, receivedByte);
-    return;
-
-  case R_STATE_ESCAPE_FOUND:
-
-    sm_esc_found_st_handler(st_machine, receivedByte);
-    return;
-
-  case R_STATE_SU_C_RCV:
-
-    sm_su_c_rcv_st_handler(st_machine, receivedByte);
-    return;
-
-  case R_STATE_SU_BCC1_OK:
-
-    sm_su_bcc1_st_handler(st_machine, receivedByte);
-    return;
-
-  case R_STATE_SU_STOP:
-
-    sm_su_state_stop_st_handler(st_machine,receivedByte);
-    return;
-
-  case R_STATE_I_STOP:
-    sm_i_state_stop_st_handler(st_machine, receivedByte);
-  }
 }
