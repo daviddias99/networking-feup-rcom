@@ -49,7 +49,7 @@ int sendUA(int fd)
 
 int sendAck(int fd, bool type, int sequence_no)
 {
-  uint8_t sequence_byte = sequence_no ? 0x80 : 0x00;
+  uint8_t sequence_byte = sequence_no ? BIT(7) : 0x00;
   uint8_t control_byte = type ? (CONTROL_RR_BASE | sequence_byte) : (CONTROL_REJ_BASE | sequence_byte);
   uint8_t response[SU_FRAME_SIZE];
 
@@ -68,9 +68,9 @@ bool valid_data_bcc(uint8_t frame[], size_t frame_size)
 {
 
   uint8_t bcc_value = frame[frame_size - 2];
-  uint8_t calculated_value = frame[4];
+  uint8_t calculated_value = 0;
 
-  for (int i = 5; i < frame_size - 2; i++)
+  for (int i = I_FRAME_DATA_START_INDEX; i < frame_size - 2; i++)
   {
 
     calculated_value ^= frame[i];
@@ -130,8 +130,8 @@ int serial_port_setup(int port) {
   /* set input mode (non-canonical, no echo,...) */
   newtio.c_lflag = 0;
 
-  newtio.c_cc[VTIME] = 20;   /* inter-character timer unused */
-  newtio.c_cc[VMIN] = 1;   /* blocking read until 5 chars received */
+  newtio.c_cc[VTIME] = VTIME_VALUE;   /* inter-character timer unused */
+  newtio.c_cc[VMIN] = VMIN_VALUE;   /* blocking read until 5 chars received */
 
   tcflush(fd, TCIOFLUSH);
 
@@ -359,10 +359,12 @@ int llread(int fd, char* buffer){
           connection_info.sequenceNumber = nextSeqNumber;
 
           // copy read frame to frame storage
-          for (int i = 4; i < st_machine.currentByte_idx - 2; i++)
-            buffer[i - 4] = st_machine.frame[i];
+          int i;
 
-          return st_machine.currentByte_idx - 6;
+          for (i = I_FRAME_DATA_START_INDEX; i < st_machine.currentByte_idx - 2; i++)
+            buffer[i - I_FRAME_DATA_START_INDEX] = st_machine.frame[i];
+
+          return i;
         }
         else
         { // duplicate frame, discard and send ack

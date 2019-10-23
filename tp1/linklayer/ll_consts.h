@@ -27,3 +27,8 @@
 #define ESC_XOR 0x20
 
 #define BIT(n)                (0x01<<(n))
+
+#define VTIME_VALUE          20
+#define VMIN_VALUE           1
+
+#define I_FRAME_DATA_START_INDEX    4
