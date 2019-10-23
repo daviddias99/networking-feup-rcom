@@ -18,13 +18,12 @@ typedef struct linklayer {
   bool connectionEstablished;
 
   uint8_t frame[2];
-}linklayer_info;
+} linklayer_info;
 
 linklayer_info connection_info; 
 
 
 static struct termios oldtio;
-volatile int STOP = false;
 int flag = 1, conta = 1;
 
 int sequence_number = 0;
@@ -162,7 +161,7 @@ int transmitter_open(int fd) {
   struct transmitter_state_machine st_machine;
 
   while (conta < 4) {
-     if (flag) {
+   
         st_machine.currentState = T_STATE_START;
         res = write(fd, frame, SU_FRAME_SIZE);
         if (res == -1) {
@@ -175,7 +174,7 @@ int transmitter_open(int fd) {
         tcflush(fd, TCIOFLUSH);
 
         // wait for answer
-        while (! flag && STOP==false) {
+        while (! flag) {
 
           uint8_t currentByte;
           res = read(fd,&currentByte,1);                              // returns after a char has been read or after timer expired
@@ -183,12 +182,12 @@ int transmitter_open(int fd) {
           tsm_process_input(&st_machine,currentByte);                   // state-machine processes the read byte
 
           if (st_machine.currentState == T_STATE_STOP) {
-              STOP=true;
+
               alarm(0);
               return fd;
           }
         }
-     }
+     
   }
 
   return -1;
@@ -278,16 +277,14 @@ int llwrite(int fd, char * buffer, int length) {
 
   while (conta < 4) {
 
-     if (flag) {
+     
         st_machine.currentState = T_STATE_START;
         write_data(fd, buffer, length);
         alarm(3);                 // activates 3 sec alarm
         flag = 0;
-        STOP = false;
-        tcflush(fd, TCIOFLUSH);
 
         // wait for answer
-        while (!flag && STOP == false) {
+        while (!flag) {
 
           printf("entrou no while\n");
 
@@ -310,7 +307,7 @@ int llwrite(int fd, char * buffer, int length) {
               }
           }
         }
-     }
+     
   }
   return res;
 }
