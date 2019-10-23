@@ -220,7 +220,7 @@ int receiver_open(int fd) {
 
   while(true){
     uint8_t currentByte;
-    res = read(fd, &currentByte, 1); /* returns after a char has been read or after timer expired */
+    res = read(fd, &currentByte, 1); /* wait for writer  */
 
     log_debug("RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte,(char)currentByte,res);
     sm_processInput(&st_machine, currentByte); /* state-machine processes the read byte */
