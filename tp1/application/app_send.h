@@ -9,19 +9,10 @@
 #include <fcntl.h>
 #include <string.h>
 
-#include "app_consts.h"
+#include "app.h"
 
 
-typedef struct tl_package{
 
-    uint8_t type;
-    uint8_t length;
-}tl_package;
-
-enum control_type{
-    START = 2,
-    END
-};
 
 int sendFile(char* file_path);
 int sendControlPacket(enum control_type type, char* arguments[], int argument_cnt);
