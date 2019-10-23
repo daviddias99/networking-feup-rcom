@@ -39,7 +39,7 @@ int sendUA(int fd)
 {
 
   uint8_t response[SU_FRAME_SIZE];
-  build_su_frame(&response, ADDR_RECEIV_RES, CONTROL_UA);
+  build_su_frame(response, ADDR_RECEIV_RES, CONTROL_UA);
 
   int res = write(fd, response, SU_FRAME_SIZE);
   log_debug("RECEIVER: UA sent to transmitter(%x %x %x %x %x) (%d bytes written)\n",response[0],response[1],response[2],response[3],response[4], res);
@@ -53,7 +53,7 @@ int sendAck(int fd, bool type, int sequence_no)
   uint8_t control_byte = type ? (CONTROL_RR_BASE | sequence_byte) : (CONTROL_REJ_BASE | sequence_byte);
   uint8_t response[SU_FRAME_SIZE];
 
-  build_su_frame(&response, ADDR_RECEIV_RES, control_byte);
+  build_su_frame(response, ADDR_RECEIV_RES, control_byte);
   int res = write(fd, response, SU_FRAME_SIZE);
 
   if (type)
@@ -150,7 +150,7 @@ int transmitter_open(int fd) {
 
   // Frame building
   uint8_t frame[SU_FRAME_SIZE];
-  build_su_frame(&frame, ADDR_TRANSM_COMMAND, CONTROL_SET);
+  build_su_frame(frame, ADDR_TRANSM_COMMAND, CONTROL_SET);
   //Alarm setup
   struct sigaction alarm_action;
   alarm_action.sa_handler = alarm_handler;
@@ -159,13 +159,17 @@ int transmitter_open(int fd) {
   int res;
 
   // State-machine setup
-  struct transmiter_frame_state_machine st_machine;
+  struct transmitter_state_machine st_machine;
 
   while (conta < 4) {
      if (flag) {
         st_machine.currentState = T_STATE_START;
         res = write(fd, frame, SU_FRAME_SIZE);
-        printf("-SET message sent to Receiver(%d bytes written)\n", res);
+        if (res == -1) {
+          perror("merdou");
+          exit(69);
+        }            
+        log_trace("-oh seu filha da puta T message sent to Receiver(%d bytes written)\n", res);
         alarm(3);                 // activates 3 sec alarm
         flag=0;
         tcflush(fd, TCIOFLUSH);
@@ -176,7 +180,7 @@ int transmitter_open(int fd) {
           uint8_t currentByte;
           res = read(fd,&currentByte,1);                              // returns after a char has been read or after timer expired
           printf("-Byte received from Receiver(0x%x)\n", currentByte);
-          trans_sm_processInput(&st_machine,currentByte);                   // state-machine processes the read byte
+          tsm_process_input(&st_machine,currentByte);                   // state-machine processes the read byte
 
           if (st_machine.currentState == T_STATE_STOP) {
               STOP=true;
@@ -259,7 +263,7 @@ int write_data(int fd, char *buffer, int length)
   frame[0] = FLAG;
   res += write(fd, frame, 1);
 
-  printf("- Message sent to Receiver(%d bytes written)\n", res);
+  log_debug("- Message sent to Receiver(%d bytes written)\n", res);
 
   return 0;
 }
