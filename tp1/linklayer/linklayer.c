@@ -91,17 +91,6 @@ int llopen(int port, int flag) {
   }
 }
 
-int llclose(int fd) {
-  sleep(1);
-
-  if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {
-    perror("tcsetattr");
-    exit(-1);
-  }
-
-  return close(fd);
-}
-
 int serial_port_setup(int port) {
   char port_path[PORT_PATH_LENGTH];
   sprintf(port_path, "/dev/ttyS%d", port);
@@ -171,7 +160,7 @@ int transmitter_open(int fd) {
         log_trace("-oh seu filha da puta T message sent to Receiver(%d bytes written)\n", res);
         alarm(3);                 // activates 3 sec alarm
         flag=0;
-        tcflush(fd, TCIOFLUSH);
+     
 
         // wait for answer
         while (! flag) {
@@ -385,4 +374,63 @@ void build_su_frame(uint8_t * buf, int address, int control) {
   buf[2] = control;
   buf[3] = address ^ control;
   buf[4] = FLAG;
+}
+
+
+
+int llclose(int fd) {
+  printf("-Closing connection...\n");
+
+  // Frame building
+  uint8_t frame[SU_FRAME_SIZE];
+  build_su_frame(frame, ADDR_TRANSM_COMMAND, CONTROL_DISC);
+  //Alarm setup
+  struct sigaction alarm_action;
+  alarm_action.sa_handler = alarm_handler;
+  sigaction(SIGALRM, &alarm_action, NULL);
+
+  int res;
+
+  // State-machine setup
+  struct transmitter_state_machine st_machine;
+
+  while (conta < 4) {
+        st_machine.currentState = T_STATE_START;
+        res = write(fd, frame, SU_FRAME_SIZE);
+        if (res == -1) {
+          perror("merdou");
+          exit(69);
+        }            
+        log_trace("-oh seu filha da puta T message sent to Receiver(%d bytes written)\n", res);
+        alarm(3);                 // activates 3 sec alarm
+        flag=0;
+
+        // wait for answer
+        while (! flag) {
+          uint8_t currentByte;
+          res = read(fd,&currentByte,1);                              // returns after a char has been read or after timer expired
+          printf("-Byte received from Receiver(0x%x)\n", currentByte);
+          tsm_process_input(&st_machine,currentByte);                   // state-machine processes the read byte
+
+          if (st_machine.currentState == T_STATE_STOP) {
+
+              uint8_t response[SU_FRAME_SIZE];
+              build_su_frame(response, ADDR_TRANSM_RES, CONTROL_UA);
+
+              int res = write(fd, response, SU_FRAME_SIZE);
+              log_debug("RECEIVER: UA sent to transmitter(%x %x %x %x %x) (%d bytes written)\n",response[0],response[1],response[2],response[3],response[4], res);
+
+              return fd;
+          }
+        }
+  }
+
+  sleep(1);
+
+  if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {
+    perror("tcsetattr");
+    exit(-1);
+  }
+
+  return close(fd);
 }
