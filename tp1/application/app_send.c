@@ -1,26 +1,27 @@
 
 #include "./app_send.h"
 
+int sendFile(char* file_path) {
 
-int sendFile(char* file_path){
-
+    // file contents
     uint8_t file_data[MB_TO_B(MAX_FILE_SIZE_MB)];
     int file_fd;
 
     file_fd = open(file_path,O_RDONLY);
 
-    if(file_fd == -1){
+    if (file_fd == -1){
         perror("file does not exist");
         exit(1);
     }
 
     int read_status = read(file_fd,file_data,MB_TO_B(MAX_FILE_SIZE_MB));
 
-    if(read_status == -1){
+    if (read_status == -1){
         printf("file reading error");
         exit(2);
     }
 
+    // file size
     char number[50];
     
     char* control_packet_arguments[4];
@@ -37,76 +38,82 @@ int sendFile(char* file_path){
     return 0;
 }
 
-int calculate_arguments_size(char* arguments[],int argument_cnt){
+int calculate_arguments_size(char* arguments[], int argument_cnt) {
 
     int result = 0;
 
-    for(int i = 0; i < argument_cnt; i+=2){
+    for (int i = 0; i < argument_cnt; i += 2) {
 
-        if(strcmp(arguments[i],"0") == 0){
-            result += sizeof(int);
-        }
-        else if(strcmp(arguments[i],"1") == 0){
-            result += sizeof(char) * strlen(arguments[i+1]);
-        }
-        else{
-            return -1;
+        uint8_t type = (uint8_t) atoi(arguments[i]);
+
+        switch (type) {
+            case CTRLP_FILE_SIZE:
+                result += sizeof(int);
+                break;
+            
+            case CTRLP_FILE_NAME:
+                result += sizeof(char) * strlen(arguments[i + 1]);
+                break;
+
+            default:
+                return -1;
         }
     }
 
     return result;
 }
 
-int buildControlPacket(uint8_t* packet,char* arguments[], int argument_cnt){
+int buildControlPacket(uint8_t* packet, char* arguments[], int argument_cnt) {
 
     int currentIndex = 1;
 
-    for(int i = 0; i < argument_cnt;i+=2){
+    for (int i = 0; i < argument_cnt; i += 2) {
 
         uint8_t type = (uint8_t) atoi(arguments[i]);
         packet[currentIndex] = type;
         currentIndex++;
-        
-        if(type == 0){
 
-            packet[currentIndex] = sizeof(int);
-            currentIndex++;
-            int value =  atoi(arguments[i+1]);
-            memcpy(packet+currentIndex,&value,sizeof(int));
-            currentIndex+=sizeof(int);
-
+        switch (type) {
+            case CTRLP_FILE_SIZE:
+            {
+                packet[currentIndex] = sizeof(int);
+                currentIndex++;
+                int value = atoi(arguments[i + 1]);
+                memcpy(packet + currentIndex, &value, sizeof(int));
+                currentIndex += sizeof(int);
+                break;
+            }
+            case CTRLP_FILE_NAME: 
+            {
+                int length = sizeof(char) * strlen(arguments[i + 1]);
+                packet[currentIndex] = length;
+                currentIndex++;
+                strcpy((char*) (packet + currentIndex), arguments[i + 1]);
+                currentIndex += length;
+                break;
+            }
+            default:
+                return -1;
         }
-        else if(type == 1){
-            int length = sizeof(char) * strlen(arguments[i+1]);
-            packet[currentIndex] = length;
-            currentIndex++;
-            strcpy((char*)(packet+currentIndex),arguments[i+1]);
-            currentIndex+=length;
-        }
-        else{
-
-            return -1;
-        }
-
     }
 
     return 0;
 }
 
-int sendControlPacket(enum control_type type, char* arguments[], int argument_cnt){
+int sendControlPacket(enum control_type type, char* arguments[], int argument_cnt) {
 
-    if(argument_cnt % 2 != 0)
+    if (argument_cnt % 2 != 0)
         return -1;
 
     int arguments_value_total_size = calculate_arguments_size(arguments, argument_cnt);
-    int control_packet_size = sizeof(uint8_t) + argument_cnt * sizeof(uint8_t)*2 + arguments_value_total_size;
+    int control_packet_size = sizeof(uint8_t) + argument_cnt * sizeof(uint8_t) * 2 + arguments_value_total_size;
     uint8_t* control_packet = malloc(control_packet_size);
 
-    buildControlPacket(control_packet,arguments,argument_cnt);
+    buildControlPacket(control_packet, arguments, argument_cnt);
 
     control_packet[0] = (uint8_t) type;
 
-    for(int i = 0; i < control_packet_size;i++){
+    for (int i = 0; i < control_packet_size; i++) {
 
         printf("- %c\n", control_packet[i]);
     }

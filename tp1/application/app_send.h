@@ -12,13 +12,13 @@
 #include "app_consts.h"
 
 
-typedef struct tl_package{
+typedef struct tl_package {
 
     uint8_t type;
     uint8_t length;
-}tl_package;
+} tl_package;
 
-enum control_type{
+enum control_type {
     START = 2,
     END
 };
