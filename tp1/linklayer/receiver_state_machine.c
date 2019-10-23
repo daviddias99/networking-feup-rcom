@@ -12,6 +12,7 @@ void sm_start_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t 
     st_machine->currentState = R_STATE_FLAG_RCV;
     st_machine->frame[FLAG_START_INDEX] = receivedByte;
     log_debug("STM: At start state --> At flag state");
+    return;
   }
 
   log_debug("STM: At start state --> At start state");
