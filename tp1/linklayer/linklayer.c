@@ -145,6 +145,50 @@ int serial_port_setup(int port) {
   return fd;
 }
 
+int transmitter_open(int fd) {
+  printf("-Establishing connection...\n");
+
+  // Frame building
+  uint8_t frame[SU_FRAME_SIZE];
+  build_su_frame(&frame, ADDR_TRANSM_COMMAND, CONTROL_SET);
+  //Alarm setup
+  struct sigaction alarm_action;
+  alarm_action.sa_handler = alarm_handler;
+  sigaction(SIGALRM, &alarm_action, NULL);
+
+  int res;
+
+  // State-machine setup
+  struct transmiter_frame_state_machine st_machine;
+
+  while (conta < 4) {
+     if (flag) {
+        st_machine.currentState = T_STATE_START;
+        res = write(fd, frame, SU_FRAME_SIZE);
+        printf("-SET message sent to Receiver(%d bytes written)\n", res);
+        alarm(3);                 // activates 3 sec alarm
+        flag=0;
+        tcflush(fd, TCIOFLUSH);
+
+        // wait for answer
+        while (! flag && STOP==false) {
+
+          uint8_t currentByte;
+          res = read(fd,&currentByte,1);                              // returns after a char has been read or after timer expired
+          printf("-Byte received from Receiver(0x%x)\n", currentByte);
+          trans_sm_processInput(&st_machine,currentByte);                   // state-machine processes the read byte
+
+          if (st_machine.currentState == T_STATE_STOP) {
+              STOP=true;
+              alarm(0);
+              return fd;
+          }
+        }
+     }
+  }
+
+  return -1;
+}
 
 int receiver_open(int fd) {
 
