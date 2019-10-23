@@ -208,10 +208,13 @@ int receiver_open(int fd) {
 
   int res;
 
+  // init state machine struct
   struct su_frame_rcv_state_machine st_machine;
   st_machine.currentState = R_STATE_START;
   st_machine.connectionEstablished = false;
   st_machine.currentByte_idx = 0;
+
+  // init link layer 
   connection_info.connectionEstablished = false;
   connection_info.sequenceNumber = 0;
 
