@@ -1,6 +1,5 @@
 #include "./app_send.h"
 
-// FIXME: change the uint8_t to char
 // FIXME: review code and use const in the defined functions
 
 int send_file(char* file_path) {
@@ -27,15 +26,9 @@ int send_file(char* file_path) {
 
     const uint8_t tlv_list_size = 2;
     tlv* tlv_list[tlv_list_size];
-    printf("Built tlv parameter list\n");
     tlv_list[0] = create_tlv_int(FILE_SIZE, file_st.st_size);
-    print_tlv(tlv_list[0]);
-    printf("Built file size tlv package\n");
     tlv_list[1] = create_tlv_str(FILE_NAME, name_from_path(file_path));
-    print_tlv(tlv_list[1]);
-    printf("Built file name tlv package\n");
 
-    printf("Built tlv packages\n");
 
     uint8_t* control_packet;
     uint8_t control_packet_size;
@@ -44,16 +37,16 @@ int send_file(char* file_path) {
         return -1;
     }
 
-    printf("Hello\n");
-
-    log_control_packet(control_packet, control_packet_size);
-
-    printf("Built control packet\n");
 
     // TODO: send start packet here
 
+
     char* file_data[MAX_PACKET_DATA];
     uint8_t bytes_read;
+
+
+    // TODO: open communication here
+
     
     while ((bytes_read = read(file_fd, file_data, MAX_PACKET_DATA)) > 0) {
         
@@ -66,7 +59,7 @@ int send_file(char* file_path) {
 
         log_data_packet((char*) data_packet);
         printf("\n");
-        // TODO: send packet here
+        // TODO: send data packet here
 
         free(data_packet);
     }
@@ -77,7 +70,9 @@ int send_file(char* file_path) {
     }
 
     // TODO: modify start packet to send end packet
+    control_packet[0] = END;
     // TODO: send the end packet
+    free(control_packet);
 
 
     for (uint8_t i = 0; i < sizeof(tlv_list) / sizeof(tlv*); i++) {

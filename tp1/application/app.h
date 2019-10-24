@@ -13,11 +13,6 @@
 
 
 
-typedef struct file_info {
-    char* path;
-    int size;
-} file_info;
-
 typedef enum packet_type {
     DATA = 1,
     START,
@@ -25,9 +20,9 @@ typedef enum packet_type {
 } packet_type;
 
 
+
 void log_control_packet(uint8_t* packet, uint8_t packet_size);
 void log_data_packet(uint8_t* packet);
-
 
 
 #endif
