@@ -388,6 +388,8 @@ int llread(int fd, char* buffer){
       break;
     }
   }
+
+  return st_machine.currentByte_idx;
 }
 
 

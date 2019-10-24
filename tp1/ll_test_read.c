@@ -18,6 +18,7 @@ int main(int argc, char** argv)
 
       buf[result] = '\0';
       printf("-- %d bytes read(%s)\n",result,buf);
+      break;
 
     }
 
