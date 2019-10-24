@@ -19,7 +19,7 @@
 #define ADDR_RECEIV_RES       0x03  //
 #define CONTROL_SET           0x03  // set
 #define CONTROL_DISC          0x0B  // disconnect
-#define CONTROL_UA            0x03  // unnumbered acknowledgment
+#define CONTROL_UA            0x07  // unnumbered acknowledgment
 #define CONTROL_RR_BASE       0x05  // receiver ready / positive acknowledgment
 #define CONTROL_REJ_BASE      0x01  // reject / negative acknowledgment
 
@@ -32,3 +32,7 @@
 #define VMIN_VALUE           1
 
 #define I_FRAME_DATA_START_INDEX    4
+
+#define DATA 0
+#define CLOSE 1
+#define OPEN 2

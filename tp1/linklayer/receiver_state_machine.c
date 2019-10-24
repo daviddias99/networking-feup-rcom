@@ -46,8 +46,8 @@ void sm_a_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t 
 { 
   log_debug("\nat control, connection established %s\b", st_machine->connectionEstablished ? "TRUE" : "FALSE");
 
-  if ((receivedByte == CONTROL_SET) || (receivedByte == CONTROL_DISC))
-  { // if the received command is to establish or disconnect a communication (S or U)
+  if ((receivedByte == CONTROL_SET) || (receivedByte == CONTROL_DISC) || (receivedByte == CONTROL_UA))
+  { // if the received command is to establish/disconnect a communication  or a UA(S or U)
 
     st_machine->currentState = R_STATE_SU_C_RCV;
     st_machine->frame[CTRL_INDEX] = receivedByte;
