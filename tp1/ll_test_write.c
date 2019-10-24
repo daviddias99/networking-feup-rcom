@@ -15,7 +15,7 @@ int main(int argc, char** argv)
     	printf("input: ");
     	fgets(buf, 255, stdin);
     	llwrite(fd, buf, strlen(buf) - 1);
-      if (buf[0] == '\0')
+      if (buf[0] == '0')
         break;
     }
 
