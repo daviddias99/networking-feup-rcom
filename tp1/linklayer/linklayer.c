@@ -211,7 +211,7 @@ int receiver_open(int fd) {
     log_debug("RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte,(char)currentByte,res);
     sm_processInput(&st_machine, currentByte); /* state-machine processes the read byte */
 
-    if(st_machine.currentState == R_STATE_SU_STOP){
+    if((st_machine.currentState == R_STATE_SU_STOP) && (st_machine.frame[CTRL_INDEX] == CONTROL_SET)){
       sendUA(fd); /* Send unnumbered acknowledgement to sender */
       connection_info.connectionEstablished = true;
       return fd;
@@ -332,10 +332,13 @@ int llread(int fd, char* buffer){
     log_debug("RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte,(char)currentByte,res);
     sm_processInput(&st_machine, currentByte); /* state-machine processes the read byte */
 
-    if (st_machine.currentState == R_STATE_SU_STOP)
+    if( (st_machine.currentState == R_STATE_SU_STOP) && (st_machine.frame[CTRL_INDEX] == CONTROL_SET))
     {
       sendUA(fd); /* Send unnumbered acknowledgement to sender */
       connection_info.sequenceNumber = 0;
+    }
+    else if((st_machine.currentState == R_STATE_SU_STOP) && (st_machine.frame[CTRL_INDEX] == CONTROL_DISC)){
+      
     }
     else if (st_machine.currentState == R_STATE_I_STOP)
     {
