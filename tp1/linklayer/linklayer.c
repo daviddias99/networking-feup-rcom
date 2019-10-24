@@ -384,12 +384,11 @@ int llread(int fd, char* buffer){
       process_read_su_frame(fd,st_machine.frame);
     }
     else if(st_machine.currentState == R_STATE_I_STOP){
-      process_read_i_frame(fd,st_machine.frame,st_machine.currentByte_idx,buffer);
-      break;
+      return process_read_i_frame(fd,st_machine.frame,st_machine.currentByte_idx,buffer);
     }
   }
 
-  return st_machine.currentByte_idx - I_FRAME_DATA_START_INDEX - 2;
+  return -1;
 }
 
 
