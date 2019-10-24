@@ -32,3 +32,7 @@
 #define VMIN_VALUE           1
 
 #define I_FRAME_DATA_START_INDEX    4
+
+#define DATA 0
+#define CLOSE 1
+#define OPEN 2
