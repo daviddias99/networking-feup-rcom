@@ -312,7 +312,7 @@ int write_data(int fd, char *buffer, int length)
 
   log_debug("- Message sent to Receiver(%d bytes written)\n", res);
 
-  return 0;
+  return res;
 }
 
 int llwrite(int fd, char * buffer, int length) {
@@ -325,7 +325,7 @@ int llwrite(int fd, char * buffer, int length) {
 
   while (numTries < 4) {
     st_machine.currentState = T_STATE_START;
-    write_data(fd, buffer, length);
+    res = write_data(fd, buffer, length);
     alarm(3);                 // activates 3 sec alarm
     timedOut = 0;
 
@@ -346,7 +346,8 @@ int llwrite(int fd, char * buffer, int length) {
       }
     }
   }
-  return res;
+  log_debug("TRASMITER EXCEED NUM TRIES\n");
+  return -1;
 }
 
 
@@ -462,7 +463,7 @@ int transmitter_close(int fd) {
         build_su_frame(response, ADDR_TRANSM_RES, CONTROL_UA);
 
         int res = write(fd, response, SU_FRAME_SIZE);
-        log_debug("RECEIVER: UA sent to transmitter(%x %x %x %x %x) (%d bytes written)\n",response[0],response[1],response[2],response[3],response[4], res);
+        log_debug("TRANSMITTER: UA sent to transmitter(%x %x %x %x %x) (%d bytes written)\n",response[0],response[1],response[2],response[3],response[4], res);
 
         return fd;
       }
