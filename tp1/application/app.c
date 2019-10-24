@@ -25,12 +25,13 @@ int main(int argc, char const *argv[]) {
         perror("Role not recognized. Exiting...");
         exit(2);
     }
+    char path[255];
     
     if (role){
         printf("File path : ");
-        fflush(stdout);
-        char path[255];
-        read(STDIN_FILENO, path, 255);
+        fflush(stdout);    
+        fgets(path, 255, stdin);
+        printf("path after read %s\n", path);
         path[strlen(path) - 1] = '\0';
         send_file(path);
     }

@@ -3,9 +3,10 @@
 // FIXME: review code and use const in the defined functions
 
 int send_file(char* file_path) {
-
+    printf("file path %s after send_file\n", file_path);
     int file_fd = open(file_path, O_RDONLY);
     if (file_fd == -1){
+        log_debug("%s", file_path);
         perror("File does not exist \n");
         exit(1);
     }
