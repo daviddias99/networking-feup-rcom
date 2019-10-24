@@ -14,7 +14,7 @@ int main(int argc, char** argv)
     while (true) {
     	printf("input: ");
     	fgets(buf, 255, stdin);
-    	llwrite(fd, buf, strlen(buf));
+    	llwrite(fd, buf, strlen(buf) - 1);
     }
 
     llclose(fd);
