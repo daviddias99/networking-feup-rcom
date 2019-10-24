@@ -285,7 +285,7 @@ int write_data(int fd, uint8_t *buffer, int length)
   return res;
 }
 
-int llwrite(int fd, char * buffer, int length) {
+int llwrite(int fd, uint8_t * buffer, int length) {
   return  write_frame(fd, DATA, buffer, length);
 }
 
