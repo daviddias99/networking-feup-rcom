@@ -9,12 +9,10 @@
 #include <fcntl.h>
 #include <string.h>
 
-#include "app.h"
+#include "./app.h"
 
 
-
-
-int sendFile(char* file_path);
-int sendControlPacket(enum control_type type, char* arguments[], int argument_cnt);
+int send_file(char* file_path);
+int build_start_packet(uint8_t* packet, tlv* tlv_list[]);
 
 #endif

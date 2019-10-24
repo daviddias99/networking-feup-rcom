@@ -1,13 +1,15 @@
 
 #include "./app_send.h"
+#include "./aux.h"
+#include "./tlv.h"
 
-int sendFile(char* file_path) {
+int send_file(char* file_path) {
 
     // file contents
     uint8_t file_data[MAX_FILE_SIZE_B];
     int file_fd;
 
-    file_fd = open(file_path,O_RDONLY);
+    file_fd = open(file_path, O_RDONLY);
 
     if (file_fd == -1){
         perror("file does not exist");
@@ -21,133 +23,55 @@ int sendFile(char* file_path) {
         exit(2);
     }
 
-    // file size
-    char number[50];
-    
-    char* control_packet_arguments[4];
-    control_packet_arguments[0] = "0";
-    sprintf(number,"%d", strlen(file_data));
-    
-    // TODO: remove this print
-    //printf("file size: %s \n", number);
-    
-    control_packet_arguments[1] = number;
-    control_packet_arguments[2] = "1";
-    control_packet_arguments[3] = file_path;
+    file_info file_info;
+    file_info.path = strdup(file_path);
+    file_info.size = strlen(file_data);
 
-    // TODO: remove this print
-    /*
-    for (int i = 0; i < 4; i++) {
-        printf("arg%d : %s \n", i, control_packet_arguments[i]);
-    }
-    */
+    tlv* tlv_list[2];
+    tlv_list[0] = create_tlv_int(FILE_SIZE, file_info.size);
+    tlv_list[1] = create_tlv_str(FILE_NAME, file_info.path);
 
-    int connection_status = sendControlPacket(START, control_packet_arguments, 4);
-    
-    printf("%d \n",connection_status);
-
-    return 0;
-}
-
-int calculate_arguments_size(char* arguments[], int argument_cnt) {
-
-    int result = 0;
-
-    for (int i = 0; i < argument_cnt; i += 2) {
-
-        uint8_t type = (uint8_t) atoi(arguments[i]);
-
-        switch (type) {
-            case FILE_SIZE:
-                result += sizeof(int);
-                break;
-            
-            case FILE_NAME:
-                result += sizeof(char) * strlen(arguments[i + 1]);
-                break;
-
-            default:
-                return -1;
-        }
-    }
-
-    return result;
-}
-
-int buildControlPacket(uint8_t* packet, char* arguments[], int argument_cnt) {
-
-    int currentIndex = 1;
-
-    for (int i = 0; i < argument_cnt; i += 2) {
-
-        uint8_t type = (uint8_t) atoi(arguments[i]);
-        // TODO: remove this print
-        printf("type : %d \n", type);
-        packet[currentIndex] = type;
-        currentIndex++;
-
-        switch (type) {
-            case FILE_SIZE:
-            {
-                packet[currentIndex] = sizeof(int);
-                // TODO: remove this print
-                printf("length : %d \n", packet[currentIndex]);
-                currentIndex++;
-                int value = atoi(arguments[i + 1]);
-                memcpy(packet + currentIndex, &value, sizeof(int));
-                // TODO: remove this print
-                printf("value : %d \n", (int) packet[currentIndex]);
-                currentIndex += sizeof(int);
-                break;
-            }
-            case FILE_NAME: 
-            {
-                int length = sizeof(char) * strlen(arguments[i + 1]);
-                packet[currentIndex] = length;
-                // TODO: remove this print
-                printf("length : %d \n", packet[currentIndex]);
-                currentIndex++;
-                strcpy((char*) (packet + currentIndex), arguments[i + 1]);
-                // TODO: remove from here
-                printf("value : ");
-                for (int k = currentIndex; k < currentIndex + length; k++) {
-                    printf("%c", packet[k]);
-                }
-                printf("\n");
-                // to here
-                currentIndex += length;
-                break;
-            }
-            default:
-                return -1;
-        }
-    }
-
-    return 0;
-}
-
-int sendControlPacket(enum control_type type, char* arguments[], int argument_cnt) {
-
-    if (argument_cnt % 2 != 0)
+    uint8_t* packet;
+    if (build_start_packet(packet, tlv_list) < 0) {
+        printf("Unable to build start packet\n");
         return -1;
-
-    int arguments_value_total_size = calculate_arguments_size(arguments, argument_cnt);
-
-    // TODO: remove this print
-    //printf("Total arguments size : %d \n", arguments_value_total_size);
-
-    int control_packet_size = sizeof(uint8_t) + argument_cnt * sizeof(uint8_t) * 2 + arguments_value_total_size;
-    uint8_t* control_packet = malloc(control_packet_size);
-
-    buildControlPacket(control_packet, arguments, argument_cnt);
-
-    control_packet[0] = (uint8_t) type;
-
-    for (int i = 0; i < control_packet_size; i++) {
-
-        printf("- %c\n", control_packet[i]);
     }
+
+    for (uint8_t i = 0; i < sizeof(tlv_list) / sizeof(tlv*); i++) {
+        destroy_tlv(tlv_list[i]);
+    }
+    free(packet);
+
+    return 0;
+}
+
+int build_start_packet(uint8_t* packet, tlv* tlv_list[]) {
     
+    size_t packet_size = 1;
+    for (uint8_t i = 0; i < sizeof(tlv_list) / sizeof(tlv*); i++)
+        packet_size += tlv_list[i]->length;
+
+    packet = malloc(packet_size);
+    if (packet == NULL) {
+        printf("Unable to allocate memory\n");
+        return -1;
+    }
+
+    packet[0] = START;
+    uint8_t packet_index = 1;
+    for (uint8_t i = 0; i < sizeof(tlv_list) / sizeof(tlv*); i++) {
+        
+        packet[packet_index] = tlv_list[i]->type;
+        packet_index++;
+
+        packet[packet_index] = tlv_list[i]->length;
+        packet_index++;
+
+        for (uint8_t j = 0; j < tlv_list[i]->length; j++) {
+            packet[packet_index] = tlv_list[i]->value[j];
+            packet_index++;
+        }
+    }
 
     return 0;
 }

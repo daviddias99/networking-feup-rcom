@@ -38,7 +38,7 @@ int main(int argc, char const *argv[])
         */
         // TODO: uncomment code above and remove sprintf
         sprintf(buffer, "resources/test.md");
-        sendFile(buffer);
+        send_file(buffer);
     }
     else {
         // receiveFile();
