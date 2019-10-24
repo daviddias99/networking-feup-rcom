@@ -141,7 +141,7 @@ int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, char* buffe
 int llopen(int port, int role) {
   struct sigaction alarm_action;
   alarm_action.sa_handler = alarm_handler;
-  sigaction(SIGALRM, &alarm_action, NULL);
+  sigaction(SIGALRM, &alarm_action, 0);
 
   int fd = serial_port_setup(port);
   connection_info.role = role;
@@ -380,7 +380,7 @@ int write_frame(int fd, int type, char * buffer, size_t length) {
     if (type == DATA)
       res = write_data(fd, buffer, length);
     else
-      res = write(fd, frame, SU_FRAME_SIZE);
+      res = write(fd, buffer, SU_FRAME_SIZE);
 
     alarm(3);                 // activates 3 sec alarm
     timedOut = 0;
