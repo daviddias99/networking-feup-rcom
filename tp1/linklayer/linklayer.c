@@ -385,9 +385,10 @@ int write_frame(int fd, int type, char * buffer, size_t length) {
     
     if (type == DATA)
       res = write_data(fd, buffer, length);
-    else
+    else {
       res = write(fd, buffer, SU_FRAME_SIZE);
-
+      log_debug("TRANSMITTER: sent to transmitter(%x %x %x %x %x) (%d bytes written)\n",buffer[0],buffer[1],buffer[2],buffer[3],buffer[4], res);
+    }
     alarm(3);                 // activates 3 sec alarm
     timedOut = 0;
 
@@ -419,7 +420,7 @@ int write_frame(int fd, int type, char * buffer, size_t length) {
           build_su_frame(response, ADDR_TRANSM_RES, CONTROL_UA);
 
           int res = write(fd, response, SU_FRAME_SIZE);
-          log_debug("RECEIVER: UA sent to transmitter(%x %x %x %x %x) (%d bytes written)\n",response[0],response[1],response[2],response[3],response[4], res);
+          log_debug("TRANSMITTER: UA sent to transmitter(%x %x %x %x %x) (%d bytes written)\n",response[0],response[1],response[2],response[3],response[4], res);
 
           return fd;
 
