@@ -208,33 +208,28 @@ int transmitter_open(int fd) {
   struct transmitter_state_machine st_machine;
 
   while (numTries < 4) {
-   
-        st_machine.currentState = T_STATE_START;
-        res = write(fd, frame, SU_FRAME_SIZE);
-        if (res == -1) {
-          perror("merdou");
-          exit(69);
-        }            
-        log_trace("-oh seu filha da puta T message sent to Receiver(%d bytes written)\n", res);
-        alarm(3);                 // activates 3 sec alarm
-        timedOut=0;
-     
 
-        // wait for answer
-        while (! timedOut) {
+    st_machine.currentState = T_STATE_START;
+    res = write(fd, frame, SU_FRAME_SIZE);
+      alarm(3);                 // activates 3 sec alarm
+    timedOut=0;
+  
 
-          uint8_t currentByte;
-          res = read(fd,&currentByte,1);                              // returns after a char has been read or after timer expired
-          printf("-Byte received from Receiver(0x%x)\n", currentByte);
-          tsm_process_input(&st_machine,currentByte);                   // state-machine processes the read byte
+    // wait for answer
+    while (! timedOut) {
 
-          if (st_machine.currentState == T_STATE_STOP) {
+      uint8_t currentByte;
+      res = read(fd,&currentByte,1);                              // returns after a char has been read or after timer expired
+      printf("-Byte received from Receiver(0x%x)\n", currentByte);
+      tsm_process_input(&st_machine,currentByte);                   // state-machine processes the read byte
 
-              alarm(0);
-              return fd;
-          }
-        }
-     
+      if (st_machine.currentState == T_STATE_STOP) {
+
+          alarm(0);
+          return fd;
+      }
+    }
+  
   }
 
   return -1;
@@ -322,38 +317,27 @@ int llwrite(int fd, char * buffer, int length) {
 	timedOut = 1;
 
   while (numTries < 4) {
+    st_machine.currentState = T_STATE_START;
+    write_data(fd, buffer, length);
+    alarm(3);                 // activates 3 sec alarm
+    timedOut = 0;
 
-     
-        st_machine.currentState = T_STATE_START;
-        write_data(fd, buffer, length);
-        alarm(3);                 // activates 3 sec alarm
-        timedOut = 0;
+    // wait for answer
+    while (!timedOut) {
 
-        // wait for answer
-        while (!timedOut) {
+      uint8_t currentByte;
+      res = read(fd, &currentByte, 1);                              // returns after a char has been read or after timer expired
+      printf("-Byte received from Receiver(0x%x)\n", currentByte);
+      tsm_process_input(&st_machine, currentByte);                   // state-machine processes the read byte
 
-          printf("entrou no while\n");
-
-          uint8_t currentByte;
-          res = read(fd, &currentByte, 1);                              // returns after a char has been read or after timer expired
-          printf("-Byte received from Receiver(0x%x)\n", currentByte);
-          tsm_process_input(&st_machine, currentByte);                   // state-machine processes the read byte
-
-          if (st_machine.currentState == T_STATE_STOP) {
-
-              printf("frame 2: %x\n", st_machine.frame[2]);
-              printf("test with %x\n", ((sequence_number  + 1)<< 7) | CONTROL_RR_BASE);
-
-              //TODO: do this
-              if (st_machine.frame[2] == ((sequence_number + 1) << 7) | CONTROL_RR_BASE) {
-                printf("entrou no if\n");
-                alarm(0);
-                sequence_number = (sequence_number + 1) % 2;
-                return res;
-              }
+      if (st_machine.currentState == T_STATE_STOP) {
+          if (st_machine.frame[2] == ((sequence_number + 1) << 7) | CONTROL_RR_BASE) {
+            alarm(0);
+            sequence_number = (sequence_number + 1) % 2;
+            return res;
           }
-        }
-     
+      }
+    }
   }
   return res;
 }
@@ -442,11 +426,12 @@ int transmitter_close(int fd) {
   while (numTries < 4) {
         st_machine.currentState = T_STATE_START;
         res = write(fd, frame, SU_FRAME_SIZE);
+       
         if (res == -1) {
-          perror("merdou");
-          exit(69);
-        }            
-        log_trace("-oh seu filha da puta T message sent to Receiver(%d bytes written)\n", res);
+          perror("erro no write");
+          continue;
+        }
+        
         alarm(3);                 // activates 3 sec alarm
         timedOut=0;
 
