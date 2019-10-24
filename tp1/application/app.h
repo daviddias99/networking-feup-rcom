@@ -6,6 +6,8 @@
 #include "stdlib.h"
 #include "stdio.h"
 
+#include "../linklayer/linklayer.h"
+
 
 #define MAX_FILE_SIZE_MB            1
 #define MB_TO_B(x)                  ((size_t) (x) << 20)   

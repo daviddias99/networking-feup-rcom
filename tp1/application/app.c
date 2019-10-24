@@ -6,6 +6,7 @@
 #define PACKET_MAX_DATA_SIZE            256
 
 #include "./app_send.h"
+#include "./app_receive.h"
 
 
 int main(int argc, char const *argv[]) {
@@ -26,19 +27,15 @@ int main(int argc, char const *argv[]) {
     }
     
     if (role){
-        /*
         printf("File path : ");
         fflush(stdout);
-        char buffer[255];
-        read(STDIN_FILENO, buffer, 255);
-        buffer[strlen(buffer) - 1] = '\0';
-        */
-        // TODO: uncomment code above
-        char* path = "/home/bernas/dev/RCOM/tp1/application/test.md";
+        char path[255];
+        read(STDIN_FILENO, path, 255);
+        path[strlen(path) - 1] = '\0';
         send_file(path);
     }
     else {
-        // receiveFile();
+        receive_file(0);
     }
 
     return 0;
