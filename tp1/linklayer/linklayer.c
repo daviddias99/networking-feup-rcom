@@ -432,6 +432,7 @@ int transmitter_close(int fd) {
   struct sigaction alarm_action;
   alarm_action.sa_handler = alarm_handler;
   sigaction(SIGALRM, &alarm_action, NULL);
+  numTries = 0;
 
   int res;
 
