@@ -399,7 +399,7 @@ void build_su_frame(uint8_t * buf, int address, int control) {
 }
 
 int llclose(int fd) {
-  printf("-Closing connection...\n");
+  printf("\n\n-CLOSING CONNECTION...\n\n");
   
   switch (connection_info.role) {
   case TRANSMITTER:
@@ -457,14 +457,14 @@ int transmitter_close(int fd) {
       tsm_process_input(&st_machine,currentByte);                   // state-machine processes the read byte
 
       if (st_machine.currentState == T_STATE_STOP) {
+        log_debug("TRANSMITTER: AT STOP STATE RECEIVED DISC");
+        uint8_t response[SU_FRAME_SIZE];
+        build_su_frame(response, ADDR_TRANSM_RES, CONTROL_UA);
 
-          uint8_t response[SU_FRAME_SIZE];
-          build_su_frame(response, ADDR_TRANSM_RES, CONTROL_UA);
+        int res = write(fd, response, SU_FRAME_SIZE);
+        log_debug("RECEIVER: UA sent to transmitter(%x %x %x %x %x) (%d bytes written)\n",response[0],response[1],response[2],response[3],response[4], res);
 
-          int res = write(fd, response, SU_FRAME_SIZE);
-          log_debug("RECEIVER: UA sent to transmitter(%x %x %x %x %x) (%d bytes written)\n",response[0],response[1],response[2],response[3],response[4], res);
-
-          return fd;
+        return fd;
       }
     }
   }

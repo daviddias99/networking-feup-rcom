@@ -23,7 +23,7 @@ void sm_start_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t 
 void sm_flag_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
 {
 
-  if (receivedByte == ADDR_TRANSM_COMMAND)
+  if (receivedByte == ADDR_TRANSM_COMMAND || receivedByte == ADDR_TRANSM_RES)
   {
     st_machine->currentState = R_STATE_A_RCV;
     st_machine->frame[ADDR_INDEX] = receivedByte;
