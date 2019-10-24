@@ -271,12 +271,12 @@ int receiver_open(int fd) {
   return 0;
 }
 
-int write_data(int fd, char *buffer, int length)
+int write_data(int fd, uint8_t *buffer, int length)
 {
 
   int res = 0;
 
-  char frame[4];
+  uint8_t frame[4];
   frame[0] = FLAG;
   frame[1] = ADDR_TRANSM_COMMAND;
   frame[2] = sequence_number ? 0x40 : 0x00;
@@ -317,7 +317,7 @@ int write_data(int fd, char *buffer, int length)
   return res;
 }
 
-int llwrite(int fd, char * buffer, int length) {
+int llwrite(int fd, uint8_t * buffer, int length) {
 
   int res;
   // State-machine setup
@@ -354,7 +354,7 @@ int llwrite(int fd, char * buffer, int length) {
 
 
 
-int llread(int fd, char* buffer){
+int llread(int fd, uint8_t* buffer){
 
   int res;
 
