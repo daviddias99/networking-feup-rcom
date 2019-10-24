@@ -9,6 +9,7 @@ static int serial_port_setup(int port);
 static void build_su_frame(uint8_t * buf, int address, int control);
 static int transmitter_close(int fd);
 static int receiver_close(int fd);
+static int write_frame(int fd, int type, char * buffer, int length);
 
 typedef struct linklayer {
 
