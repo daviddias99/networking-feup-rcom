@@ -38,14 +38,23 @@ int send_file(char* file_path) {
     }
 
 
-    // TODO: send start packet here
-
-
     char* file_data[MAX_PACKET_DATA];
     uint8_t bytes_read;
 
+    int serial_port_fd;
 
-    // TODO: open communication here
+    do{
+        serial_port_fd = llopen(0,TRANSMITTER);
+        sleep(1);
+    }while(serial_port_fd < 0);
+
+    int nWritten;
+
+    do{
+        nWritten = ll_write(serial_port_fd,control_packet,control_packet_size);
+
+    }while(nWritten != control_packet_size);
+
 
     
     while ((bytes_read = read(file_fd, file_data, MAX_PACKET_DATA)) > 0) {
@@ -59,8 +68,11 @@ int send_file(char* file_path) {
 
         log_data_packet((char*) data_packet);
         printf("\n");
-        // TODO: send data packet here
 
+        do{
+            nWritten = ll_write(serial_port_fd, data_packet, bytes_read + 4);
+
+        } while (nWritten != control_packet_size);
         free(data_packet);
     }
 
@@ -71,14 +83,19 @@ int send_file(char* file_path) {
 
     // TODO: modify start packet to send end packet
     control_packet[0] = END;
-    // TODO: send the end packet
-    free(control_packet);
+
+    do{
+        nWritten = ll_write(serial_port_fd,control_packet,control_packet_size);
+
+    }while(nWritten != control_packet_size);
 
 
     for (uint8_t i = 0; i < sizeof(tlv_list) / sizeof(tlv*); i++) {
         destroy_tlv(tlv_list[i]);
     }
     free(control_packet);
+
+    close(file_fd);
 
     return 0;
 }
