@@ -138,6 +138,10 @@ int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, char* buffe
 }
 
 int llopen(int port, int role) {
+  struct sigaction alarm_action;
+  alarm_action.sa_handler = alarm_handler;
+  sigaction(SIGALRM, &alarm_action, NULL);
+
   int fd = serial_port_setup(port);
   connection_info.role = role;
   switch (role) {
@@ -414,37 +418,61 @@ int transmitter_close(int fd) {
   // Frame building
   uint8_t frame[SU_FRAME_SIZE];
   build_su_frame(frame, ADDR_TRANSM_COMMAND, CONTROL_DISC);
-  //Alarm setup
-  struct sigaction alarm_action;
-  alarm_action.sa_handler = alarm_handler;
-  sigaction(SIGALRM, &alarm_action, NULL);
+  
+  write_frame(fd, CLOSE, frame, NULL);
+}
 
+
+int receiver_close(int fd) {
+
+  
+}
+
+
+
+int write_frame(int fd, int type, char * buffer, size_t length) {
   int res;
-
-  // State-machine setup
   struct transmitter_state_machine st_machine;
+  
+  numTries = 1;
+  timedOut = 1;
 
   while (numTries < 4) {
+
     st_machine.currentState = T_STATE_START;
-    res = write(fd, frame, SU_FRAME_SIZE);
     
-    if (res == -1) {
-      perror("erro no write");
-      continue;
-    }
-    
+    if (type == DATA)
+      res = write_data(fd, buffer, length);
+    else
+      res = write(fd, frame, SU_FRAME_SIZE);
+
     alarm(3);                 // activates 3 sec alarm
-    timedOut=0;
+    timedOut = 0;
 
     // wait for answer
-    while (! timedOut) {
+    while (!timedOut) {
+
       uint8_t currentByte;
-      res = read(fd,&currentByte,1);                              // returns after a char has been read or after timer expired
+      res = read(fd, &currentByte, 1);                              // returns after a char has been read or after timer expired
       printf("-Byte received from Receiver(0x%x)\n", currentByte);
-      tsm_process_input(&st_machine,currentByte);                   // state-machine processes the read byte
+      tsm_process_input(&st_machine, currentByte);                   // state-machine processes the read byte
 
       if (st_machine.currentState == T_STATE_STOP) {
-
+        alarm(0);
+        if (type == DATA) {
+          if (st_machine.frame[2] == ((sequence_number + 1) << 7) | CONTROL_RR_BASE) {
+            
+            sequence_number = (sequence_number + 1) % 2;
+            return 0;
+          }
+        }
+        else if (type == OPEN) {
+          
+          return fd;
+        }
+        else if (type == CLOSE) {
+          
+          
           uint8_t response[SU_FRAME_SIZE];
           build_su_frame(response, ADDR_TRANSM_RES, CONTROL_UA);
 
@@ -452,13 +480,11 @@ int transmitter_close(int fd) {
           log_debug("RECEIVER: UA sent to transmitter(%x %x %x %x %x) (%d bytes written)\n",response[0],response[1],response[2],response[3],response[4], res);
 
           return fd;
+
+        }
       }
     }
   }
-}
 
-
-int receiver_close(int fd) {
-
-  
+  return res;
 }
