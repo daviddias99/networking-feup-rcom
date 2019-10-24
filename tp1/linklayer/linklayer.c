@@ -389,7 +389,7 @@ int llread(int fd, char* buffer){
     }
   }
 
-  return st_machine.currentByte_idx - I_FRAME_DATA_START_INDEX;
+  return st_machine.currentByte_idx - I_FRAME_DATA_START_INDEX - 2;
 }
 
 
