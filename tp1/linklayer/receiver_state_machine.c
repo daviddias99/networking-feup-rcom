@@ -43,10 +43,11 @@ void sm_flag_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t r
 }
 
 void sm_a_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
-{
+{ 
+  log_debug("\nat control, connection established %s\b", st_machine->connectionEstablished ? "TRUE" : "FALSE");
 
-  if (receivedByte == CONTROL_SET)
-  { // if the received command is to establish a communication (S or U)
+  if ((receivedByte == CONTROL_SET) || (receivedByte == CONTROL_DISC))
+  { // if the received command is to establish or disconnect a communication (S or U)
 
     st_machine->currentState = R_STATE_SU_C_RCV;
     st_machine->frame[CTRL_INDEX] = receivedByte;
@@ -135,6 +136,7 @@ void sm_i_data_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uin
     }
 
     st_machine->frame[st_machine->currentByte_idx] = receivedByte;
+    st_machine->currentByte_idx++;
     st_machine->currentState = R_STATE_I_STOP;
     log_debug("STM: At Data RCV state --> At I stop state");
   }

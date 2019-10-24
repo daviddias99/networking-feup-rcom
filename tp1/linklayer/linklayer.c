@@ -80,6 +80,61 @@ bool valid_data_bcc(uint8_t frame[], size_t frame_size)
   return bcc_value == calculated_value;
 }
 
+int process_read_su_frame(int fd, uint8_t frame[]){
+
+  if(frame[CTRL_INDEX] == CONTROL_SET){
+
+    sendUA(fd); /* Send unnumbered acknowledgement to sender */
+    connection_info.sequenceNumber = 0;
+    
+    return 0;
+  }
+  else if(frame[CTRL_INDEX] == CONTROL_DISC){
+
+  }
+
+
+}
+
+int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, char* buffer){
+
+  bool isDataBCCValid = valid_data_bcc(frame, frame_size);
+
+  if (isDataBCCValid)
+  { // if the data bcc is valid check for the sequence number
+
+    log_debug("RECEIVER: Data BCC is valid");
+    int packetSeqNumber = frame[CTRL_INDEX] >> 6;
+
+    log_debug("RECEIVER: Received frame with seq=%d, desired was seq=%d", packetSeqNumber, connection_info.sequenceNumber);
+    if (packetSeqNumber == connection_info.sequenceNumber)
+    { // correct sequence number, send ack with next seq number
+
+      int nextSeqNumber = connection_info.sequenceNumber ? 0 : 1;
+      sendAck(fd, true, nextSeqNumber);
+      connection_info.sequenceNumber = nextSeqNumber;
+
+      // copy read frame to frame storage
+      int i;
+
+      for (i = I_FRAME_DATA_START_INDEX; i < frame_size - 2; i++)
+        buffer[i - I_FRAME_DATA_START_INDEX] = frame[i];
+
+      return i;
+    }
+    else
+    { // duplicate frame, discard and send ack
+      log_debug("RECEIVER: duplicate frame received");
+      sendAck(fd, true, connection_info.sequenceNumber);
+    }
+  }
+  else
+  { // if the data bcc is invalid send nack asking for the same frame
+    log_debug("RECEIVER: Data BCC is invalid");
+    sendAck(fd, false, connection_info.sequenceNumber);
+  }
+}
+
 int llopen(int port, int role) {
   int fd = serial_port_setup(port);
   connection_info.role = role;
@@ -203,8 +258,7 @@ int receiver_open(int fd) {
     sm_processInput(&st_machine, currentByte); /* state-machine processes the read byte */
 
     if(st_machine.currentState == R_STATE_SU_STOP){
-      sendUA(fd); /* Send unnumbered acknowledgement to sender */
-      connection_info.connectionEstablished = true;
+      process_read_su_frame(fd,st_machine.frame);
       return fd;
     }
   }
@@ -303,6 +357,8 @@ int llwrite(int fd, char * buffer, int length) {
   return res;
 }
 
+
+
 int llread(int fd, char* buffer){
 
   int res;
@@ -323,49 +379,22 @@ int llread(int fd, char* buffer){
     log_debug("RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte,(char)currentByte,res);
     sm_processInput(&st_machine, currentByte); /* state-machine processes the read byte */
 
-    if (st_machine.currentState == R_STATE_SU_STOP)
+    switch (st_machine.currentState)
     {
-      sendUA(fd); /* Send unnumbered acknowledgement to sender */
-      connection_info.sequenceNumber = 0;
+    case R_STATE_SU_STOP:
+
+      process_read_su_frame(fd,st_machine.frame);
+      break;
+    
+    case R_STATE_I_STOP:
+
+      process_read_i_frame(fd,st_machine.frame,st_machine.currentByte_idx,buffer);
+      break;
+    
+    default:
+      break;
     }
-    else if (st_machine.currentState == R_STATE_I_STOP)
-    {
-      bool isDataBCCValid = valid_data_bcc(st_machine.frame, st_machine.currentByte_idx + 1);
 
-      if (isDataBCCValid)
-      { // if the data bcc is valid check for the sequence number
-
-        log_debug("RECEIVER: Data BCC is valid");
-        int packetSeqNumber = st_machine.frame[CTRL_INDEX] >> 6;
-
-        log_debug("RECEIVER: Received frame with seq=%d, desired was seq=%d", packetSeqNumber, connection_info.sequenceNumber);
-        if (packetSeqNumber == connection_info.sequenceNumber)
-        { // correct sequence number, send ack with next seq number
-
-          int nextSeqNumber = connection_info.sequenceNumber ? 0 : 1;
-          sendAck(fd, true, nextSeqNumber);
-          connection_info.sequenceNumber = nextSeqNumber;
-
-          // copy read frame to frame storage
-          int i;
-
-          for (i = I_FRAME_DATA_START_INDEX; i < st_machine.currentByte_idx - 2; i++)
-            buffer[i - I_FRAME_DATA_START_INDEX] = st_machine.frame[i];
-
-          return i;
-        }
-        else
-        { // duplicate frame, discard and send ack
-          log_debug("RECEIVER: duplicate frame received");
-          sendAck(fd, true, connection_info.sequenceNumber);
-        }
-      }
-      else
-      { // if the data bcc is invalid send nack asking for the same frame
-        log_debug("RECEIVER: Data BCC is invalid");
-        sendAck(fd, false, connection_info.sequenceNumber);
-      }
-    }
   }
 }
 
