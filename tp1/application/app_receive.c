@@ -9,7 +9,7 @@ int receive_file(int port) {
 
     int port_fd = llopen(port, RECEIVER);
     if (port_fd < 0) {
-        printf("No communication established\n");
+        log_debug("No communication established\n");
         exit(1);
     }
 
@@ -17,7 +17,7 @@ int receive_file(int port) {
     llread(port_fd, packet);
     
     if (packet[0] != START) {
-        printf("Expected start packet\n");
+        log_debug("Expected start packet\n");
         exit(1);
     }
 
@@ -37,7 +37,7 @@ int receive_file(int port) {
             break;
         }
         else if (packet[0] != DATA) {
-            printf("Found unexpected type\n");
+            log_debug("Found unexpected type\n");
             exit(1);
         }
 
@@ -45,7 +45,7 @@ int receive_file(int port) {
     }
 
     if (bytes_read < 0) {
-        printf("Error while reading\n");
+        log_debug("Error while reading\n");
         exit(1);
     } 
 
@@ -53,7 +53,7 @@ int receive_file(int port) {
 
     // Check if start and end packets carried the same information
     if (compare_control_info(start_info, end_info) == 0) {
-        printf("Start and end packets carried different information\n");
+        log_debug("Start and end packets carried different information\n");
     }
 
     // TODO: check if the written file as the same size as the one on the control packets
@@ -67,13 +67,13 @@ int receive_file(int port) {
 
 control_info* create_control_info(uint8_t* packet) {
     if (packet[0] != END && packet[0] != START) {
-        printf("Unexpected packet type\n");
+        log_debug("Unexpected packet type\n");
         return NULL;
     }
 
     control_info* info = malloc(sizeof(control_info));
     if (info == NULL) {
-        printf("Unable to allocate memory\n");
+        log_debug("Unable to allocate memory\n");
         return NULL;
     }
 
@@ -95,14 +95,14 @@ control_info* create_control_info(uint8_t* packet) {
             {  
                 info->file_name = strndup(packet + packet_index, length);
                 if (info->file_name == NULL) {
-                    printf("Error allocating memory for file name\n");
+                    log_debug("Error allocating memory for file name\n");
                     return NULL;
                 }
                 break;
             }
             default:
             {
-                printf("Found unexpected parameter type\n");
+                log_debug("Found unexpected parameter type\n");
                 return NULL;
             }
         }
