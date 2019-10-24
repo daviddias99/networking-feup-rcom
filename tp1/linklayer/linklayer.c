@@ -89,12 +89,16 @@ int process_read_su_frame(int fd, uint8_t frame[]){
     connection_info.sequenceNumber = 0;
     connection_info.connectionEstablished = true;
     
-    return 0;
+    return CONTROL_SET;
   }
   else if(frame[CTRL_INDEX] == CONTROL_DISC){
 
+    return CONTROL_DISC;
   }
+  else if(frame[CTRL_INDEX] == CONTROL_UA){
 
+    return CONTROL_UA;
+  }
 
 }
 
@@ -135,6 +139,8 @@ int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, char* buffe
     log_debug("RECEIVER: Data BCC is invalid");
     sendAck(fd, false, connection_info.sequenceNumber);
   }
+
+  return -1;
 }
 
 int llopen(int port, int role) {
@@ -212,7 +218,7 @@ int transmitter_open(int fd) {
 
     st_machine.currentState = T_STATE_START;
     res = write(fd, frame, SU_FRAME_SIZE);
-      alarm(3);                 // activates 3 sec alarm
+    alarm(3);                 // activates 3 sec alarm
     timedOut=0;
   
 
@@ -366,10 +372,17 @@ int llread(int fd, char* buffer){
     sm_processInput(&st_machine, currentByte); /* state-machine processes the read byte */
 
     if(st_machine.currentState == R_STATE_SU_STOP){
-      process_read_su_frame(fd,st_machine.frame);
+      if(process_read_su_frame(fd,st_machine.frame) == CONTROL_DISC)
+        return 0;
     }
     else if(st_machine.currentState == R_STATE_I_STOP){
-      return process_read_i_frame(fd,st_machine.frame,st_machine.currentByte_idx,buffer);
+
+      int nRead = process_read_i_frame(fd,st_machine.frame,st_machine.currentByte_idx,buffer);
+
+      if(nRead < 0)
+        continue;
+      else
+        return nRead; 
     }
   }
 
@@ -460,5 +473,61 @@ int transmitter_close(int fd) {
 
 int receiver_close(int fd) {
 
+  int res;
+  bool disconnecting = false;
+
+  struct su_frame_rcv_state_machine st_machine;
+  st_machine.currentState = R_STATE_START;
+  st_machine.connectionEstablished = connection_info.connectionEstablished;
+  st_machine.currentByte_idx = 0;
+
+  // Frame building
+  uint8_t frame[SU_FRAME_SIZE];
+  build_su_frame(frame, ADDR_RECEIV_COMMAND, CONTROL_DISC);
+  //Alarm setup
+  struct sigaction alarm_action;
+  alarm_action.sa_handler = alarm_handler;
+  sigaction(SIGALRM, &alarm_action, NULL);
+  timedOut = 0;
+  numTries = 0;
+
+  log_debug("RECEIVER: started listening for disconnecting calls");
+  while (numTries < 4)
+  { /* loop for input */
+
+    uint8_t currentByte;
+    res = read(fd, &currentByte, 1); /* returns after a char has been read or after timer expired */
+    
+    log_debug("RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte,(char)currentByte,res);
+    sm_processInput(&st_machine, currentByte); /* state-machine processes the read byte */
+
+    if(disconnecting && timedOut){
+      log_debug("RECEIVER: disc timeout happened, trying again (%d tries)",numTries + 1);
+      res = write(fd, frame, SU_FRAME_SIZE);
+      alarm(3);
+      timedOut = 0;
+    }
+
+    if(st_machine.currentState == R_STATE_SU_STOP){
+
+      int process_result = process_read_su_frame(fd,st_machine.frame);
+
+      if(process_result == CONTROL_DISC){
+        log_debug("RECEIVER: DISC received, sending DISC to trasmitter");
+        res = write(fd, frame, SU_FRAME_SIZE);
+        alarm(0);
+        alarm(3);
+        timedOut = 0;
+        disconnecting = true;
+      } 
+      else if((process_result == CONTROL_UA) && disconnecting){
+        log_debug("RECEIVER: UA received, returning...");
+        alarm(0);
+        return 0;
+      } 
+    }
+  }
+
+  return -1;
   
 }
