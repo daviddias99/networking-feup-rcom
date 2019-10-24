@@ -202,42 +202,7 @@ int transmitter_open(int fd) {
   // Frame building
   uint8_t frame[SU_FRAME_SIZE];
   build_su_frame(frame, ADDR_TRANSM_COMMAND, CONTROL_SET);
-  //Alarm setup
-  struct sigaction alarm_action;
-  alarm_action.sa_handler = alarm_handler;
-  sigaction(SIGALRM, &alarm_action, NULL);
-
-  int res;
-
-  // State-machine setup
-  struct transmitter_state_machine st_machine;
-
-  while (numTries < 4) {
-
-    st_machine.currentState = T_STATE_START;
-    res = write(fd, frame, SU_FRAME_SIZE);
-      alarm(3);                 // activates 3 sec alarm
-    timedOut=0;
-  
-
-    // wait for answer
-    while (! timedOut) {
-
-      uint8_t currentByte;
-      res = read(fd,&currentByte,1);                              // returns after a char has been read or after timer expired
-      printf("-Byte received from Receiver(0x%x)\n", currentByte);
-      tsm_process_input(&st_machine,currentByte);                   // state-machine processes the read byte
-
-      if (st_machine.currentState == T_STATE_STOP) {
-
-          alarm(0);
-          return fd;
-      }
-    }
-  
-  }
-
-  return -1;
+  return write_frame(fd, OPEN, frame, 0);
 }
 
 int receiver_open(int fd) {
@@ -314,37 +279,7 @@ int write_data(int fd, char *buffer, int length)
 }
 
 int llwrite(int fd, char * buffer, int length) {
-
-  int res;
-  // State-machine setup
-  struct transmitter_state_machine st_machine;
-	numTries = 1;
-	timedOut = 1;
-
-  while (numTries < 4) {
-    st_machine.currentState = T_STATE_START;
-    write_data(fd, buffer, length);
-    alarm(3);                 // activates 3 sec alarm
-    timedOut = 0;
-
-    // wait for answer
-    while (!timedOut) {
-
-      uint8_t currentByte;
-      res = read(fd, &currentByte, 1);                              // returns after a char has been read or after timer expired
-      printf("-Byte received from Receiver(0x%x)\n", currentByte);
-      tsm_process_input(&st_machine, currentByte);                   // state-machine processes the read byte
-
-      if (st_machine.currentState == T_STATE_STOP) {
-          if (st_machine.frame[2] == ((sequence_number + 1) << 7) | CONTROL_RR_BASE) {
-            alarm(0);
-            sequence_number = (sequence_number + 1) % 2;
-            return res;
-          }
-      }
-    }
-  }
-  return res;
+  return  write_frame(fd, DATA, buffer, length);
 }
 
 
