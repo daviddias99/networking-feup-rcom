@@ -144,6 +144,11 @@ int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, char* buffe
 }
 
 int llopen(int port, int role) {
+  
+  struct sigaction alarm_action;
+  alarm_action.sa_handler = alarm_handler;
+  sigaction(SIGALRM, &alarm_action, NULL);
+  
   int fd = serial_port_setup(port);
   connection_info.role = role;
   switch (role) {
@@ -205,9 +210,6 @@ int transmitter_open(int fd) {
   uint8_t frame[SU_FRAME_SIZE];
   build_su_frame(frame, ADDR_TRANSM_COMMAND, CONTROL_SET);
   //Alarm setup
-  struct sigaction alarm_action;
-  alarm_action.sa_handler = alarm_handler;
-  sigaction(SIGALRM, &alarm_action, NULL);
 
   int res;
 
@@ -429,9 +431,6 @@ int transmitter_close(int fd) {
   uint8_t frame[SU_FRAME_SIZE];
   build_su_frame(frame, ADDR_TRANSM_COMMAND, CONTROL_DISC);
   //Alarm setup
-  struct sigaction alarm_action;
-  alarm_action.sa_handler = alarm_handler;
-  sigaction(SIGALRM, &alarm_action, NULL);
   numTries = 0;
 
   int res;
@@ -489,9 +488,6 @@ int receiver_close(int fd) {
   uint8_t frame[SU_FRAME_SIZE];
   build_su_frame(frame, ADDR_RECEIV_COMMAND, CONTROL_DISC);
   //Alarm setup
-  struct sigaction alarm_action;
-  alarm_action.sa_handler = alarm_handler;
-  sigaction(SIGALRM, &alarm_action, NULL);
   timedOut = 0;
   numTries = 0;
 
