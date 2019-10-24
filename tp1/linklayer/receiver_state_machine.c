@@ -135,6 +135,7 @@ void sm_i_data_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uin
     }
 
     st_machine->frame[st_machine->currentByte_idx] = receivedByte;
+    st_machine->currentByte_idx++;
     st_machine->currentState = R_STATE_I_STOP;
     log_debug("STM: At Data RCV state --> At I stop state");
   }
