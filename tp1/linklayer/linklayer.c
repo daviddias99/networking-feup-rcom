@@ -121,7 +121,7 @@ int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, char* buffe
       for (i = I_FRAME_DATA_START_INDEX; i < frame_size - 2; i++)
         buffer[i - I_FRAME_DATA_START_INDEX] = frame[i];
 
-      return i;
+      return i - I_FRAME_DATA_START_INDEX;
     }
     else
     { // duplicate frame, discard and send ack
