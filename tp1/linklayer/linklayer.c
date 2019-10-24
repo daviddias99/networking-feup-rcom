@@ -84,6 +84,7 @@ int process_read_su_frame(int fd, uint8_t frame[]){
 
     sendUA(fd); /* Send unnumbered acknowledgement to sender */
     connection_info.sequenceNumber = 0;
+    connection_info.connectionEstablished = true;
     
     return 0;
   }
