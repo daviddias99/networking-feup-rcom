@@ -16,7 +16,8 @@ int main(int argc, char** argv)
     	int result = llread(fd, buf);
         
 
-        printf("-- %d bytes read(%s)\n",result,buf);
+      buf[result] = '\0';
+      printf("-- %d bytes read(%s)\n",result,buf);
 
     }
 

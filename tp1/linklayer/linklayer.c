@@ -380,22 +380,13 @@ int llread(int fd, char* buffer){
     log_debug("RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte,(char)currentByte,res);
     sm_processInput(&st_machine, currentByte); /* state-machine processes the read byte */
 
-    switch (st_machine.currentState)
-    {
-    case R_STATE_SU_STOP:
-
+    if(st_machine.currentState == R_STATE_SU_STOP){
       process_read_su_frame(fd,st_machine.frame);
-      break;
-    
-    case R_STATE_I_STOP:
-
+    }
+    else if(st_machine.currentState == R_STATE_I_STOP){
       process_read_i_frame(fd,st_machine.frame,st_machine.currentByte_idx,buffer);
       break;
-    
-    default:
-      break;
     }
-
   }
 }
 
