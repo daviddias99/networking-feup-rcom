@@ -50,10 +50,10 @@ int send_file(char* file_path) {
 
     int nWritten;
 
-    do{
-        nWritten = ll_write(serial_port_fd,control_packet,control_packet_size);
+    do {
+        nWritten = llwrite(serial_port_fd, control_packet,control_packet_size);
 
-    }while(nWritten != control_packet_size);
+    } while(nWritten != control_packet_size);
 
 
     
@@ -70,7 +70,7 @@ int send_file(char* file_path) {
         printf("\n");
 
         do{
-            nWritten = ll_write(serial_port_fd, data_packet, bytes_read + 4);
+            nWritten = llwrite(serial_port_fd, data_packet, bytes_read + 4);
 
         } while (nWritten != control_packet_size);
         free(data_packet);
@@ -85,7 +85,7 @@ int send_file(char* file_path) {
     control_packet[0] = END;
 
     do{
-        nWritten = ll_write(serial_port_fd,control_packet,control_packet_size);
+        nWritten = llwrite(serial_port_fd,control_packet,control_packet_size);
 
     }while(nWritten != control_packet_size);
 
