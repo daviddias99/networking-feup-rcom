@@ -11,7 +11,7 @@
 
 #include "./app.h"
 #include "./tlv.h"
-#include "./linklayer/linklayer.h"
+#include "../linklayer/linklayer.h"
 
 
 // TODO: change this value
