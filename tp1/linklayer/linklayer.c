@@ -355,7 +355,7 @@ int transmitter_close(int fd) {
   uint8_t frame[SU_FRAME_SIZE];
   build_su_frame(frame, ADDR_TRANSM_COMMAND, CONTROL_DISC);
   
-  write_frame(fd, CLOSE, frame, NULL);
+  write_frame(fd, CLOSE, frame, 0);
 }
 
 
