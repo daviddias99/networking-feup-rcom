@@ -1,65 +1,112 @@
-
 #include "./app_send.h"
-#include "./aux.h"
-#include "./tlv.h"
+
+// FIXME: change the uint8_t to char
+// FIXME: review code and use const in the defined functions
 
 int send_file(char* file_path) {
 
-    // file contents
-    uint8_t file_data[MAX_FILE_SIZE_B];
-    int file_fd;
-
-    file_fd = open(file_path, O_RDONLY);
-
+    int file_fd = open(file_path, O_RDONLY);
     if (file_fd == -1){
-        perror("file does not exist");
+        perror("File does not exist \n");
         exit(1);
     }
 
-    int read_status = read(file_fd, file_data, MB_TO_B(MAX_FILE_SIZE_MB));
+    struct stat file_st; /*= malloc(sizeof(stat));
+    if (file_st == NULL) {
+        perror("Unable to allocate memory \n");
+        exit(1);
+    } */
 
-    if (read_status == -1){
-        printf("file reading error");
-        exit(2);
+    
+    if (fstat(file_fd, &file_st) < 0) {
+        perror("Unable to get file info \n");
+        //free(file_st);
+        exit(1);
     }
 
-    file_info file_info;
-    file_info.path = strdup(file_path);
-    file_info.size = strlen(file_data);
 
-    tlv* tlv_list[2];
-    tlv_list[0] = create_tlv_int(FILE_SIZE, file_info.size);
-    tlv_list[1] = create_tlv_str(FILE_NAME, file_info.path);
+    const uint8_t tlv_list_size = 2;
+    tlv* tlv_list[tlv_list_size];
+    printf("Built tlv parameter list\n");
+    tlv_list[0] = create_tlv_int(FILE_SIZE, file_st.st_size);
+    print_tlv(tlv_list[0]);
+    printf("Built file size tlv package\n");
+    tlv_list[1] = create_tlv_str(FILE_NAME, name_from_path(file_path));
+    print_tlv(tlv_list[1]);
+    printf("Built file name tlv package\n");
 
-    uint8_t* packet;
-    if (build_start_packet(packet, tlv_list) < 0) {
+    printf("Built tlv packages\n");
+
+    uint8_t* control_packet;
+    uint8_t control_packet_size;
+    if ((control_packet = build_control_packet(START, &control_packet_size, tlv_list, tlv_list_size)) == NULL) {
         printf("Unable to build start packet\n");
         return -1;
     }
 
+    printf("Hello\n");
+
+    log_control_packet(control_packet, control_packet_size);
+
+    printf("Built control packet\n");
+
+    // TODO: send start packet here
+
+    char* file_data[MAX_PACKET_DATA];
+    uint8_t bytes_read;
+    
+    while ((bytes_read = read(file_fd, file_data, MAX_PACKET_DATA)) > 0) {
+        
+
+        uint8_t* data_packet;
+        if ((data_packet = build_data_packet((uint8_t *) file_data, bytes_read)) == NULL) {
+            perror("Error!\n");
+            break;
+        }
+
+        log_data_packet((char*) data_packet);
+        printf("\n");
+        // TODO: send packet here
+
+        free(data_packet);
+    }
+
+    if (bytes_read == -1){
+        perror("Error while reading the file \n");
+        exit(1);
+    }
+
+    // TODO: modify start packet to send end packet
+    // TODO: send the end packet
+
+
     for (uint8_t i = 0; i < sizeof(tlv_list) / sizeof(tlv*); i++) {
         destroy_tlv(tlv_list[i]);
     }
-    free(packet);
+    free(control_packet);
 
     return 0;
 }
 
-int build_start_packet(uint8_t* packet, tlv* tlv_list[]) {
+// TODO: modify this function to build only the start packet
+uint8_t* build_control_packet(packet_type type, uint8_t* packet_size, tlv* tlv_list[], const uint8_t tlv_list_size) {
     
-    size_t packet_size = 1;
-    for (uint8_t i = 0; i < sizeof(tlv_list) / sizeof(tlv*); i++)
-        packet_size += tlv_list[i]->length;
+    *packet_size = 1;
+    for (uint8_t i = 0; i < tlv_list_size; i++)
+        *packet_size += tlv_list[i]->length;
 
-    packet = malloc(packet_size);
+    printf("control packet size : %d\n", packet_size);
+
+    uint8_t* packet = malloc(*packet_size);
     if (packet == NULL) {
         printf("Unable to allocate memory\n");
-        return -1;
+        return NULL;
     }
 
-    packet[0] = START;
+    packet[0] = type;
+
     uint8_t packet_index = 1;
-    for (uint8_t i = 0; i < sizeof(tlv_list) / sizeof(tlv*); i++) {
+    for (uint8_t i = 0; i < tlv_list_size; i++) {
         
         packet[packet_index] = tlv_list[i]->type;
         packet_index++;
@@ -73,5 +120,44 @@ int build_start_packet(uint8_t* packet, tlv* tlv_list[]) {
         }
     }
 
-    return 0;
+    return packet;
+}
+
+
+uint8_t* build_data_packet(uint8_t* data, uint8_t data_size) {
+    static uint8_t sequence_number = 0;
+    sequence_number %= 256;
+
+    uint8_t* packet = malloc(4 + data_size);
+    if (packet == NULL) {
+        printf("Unable to allocate memory for data packet number : %d\n", sequence_number);
+        return NULL;
+    }
+
+    packet[0] = DATA;
+    packet[1] = sequence_number;
+    packet[2] = data_size / 256;
+    packet[3] = data_size - packet[2];
+
+    uint8_t* ptr = memcpy(packet + 4, (uint8_t *) data, data_size);
+    if (ptr != packet + 4) {
+        printf("Failed to build data packet number : %d\n", sequence_number);
+        free(packet);
+        return NULL;
+    }
+
+    sequence_number++;
+
+    return packet;
+}
+
+char* name_from_path(char* path) {
+
+    char* name = path;
+    for (size_t i = 0; i < strlen(path); i++) {
+        if (path[i] == '/')
+            name = path + i + 1;
+    }
+
+    return name;
 }

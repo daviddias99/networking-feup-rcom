@@ -25,12 +25,14 @@ typedef struct tlv_package {
     value_type value_type;
 } tlv;
 
-
 tlv* create_tlv_int(data_type type, int value);
 tlv* create_tlv_str(data_type type, char* value);
 
 void destroy_tlv(tlv* tlv_ptr);
 
 void print_tlv(tlv* tlv_ptr);
+
+void int_to_array(int integer, uint8_t* array);
+int array_to_int(uint8_t* array);
 
 #endif

@@ -4,9 +4,8 @@ tlv* create_tlv_int(data_type type, int value) {
     tlv* tlv_ptr;
 
     tlv_ptr = malloc(sizeof(tlv));
-
     if (tlv_ptr == NULL) {
-        perror("Unable to allocate memory");
+        printf("Unable to allocate memory\n");
         return NULL;
     }
 
@@ -22,10 +21,7 @@ tlv* create_tlv_int(data_type type, int value) {
 
     tlv_ptr->value_type = INT;
     
-    tlv_ptr->value[0] = (value >> 24) & 0xFF;
-    tlv_ptr->value[1] = (value >> 16) & 0xFF;
-    tlv_ptr->value[2] = (value >> 8) & 0xFF;
-    tlv_ptr->value[3] = value & 0xFF;
+    int_to_array(value, tlv_ptr->value);
 
     return tlv_ptr;
 }
@@ -73,10 +69,7 @@ void print_tlv(tlv* tlv_ptr) {
         }
         case INT:
         {
-            int integer = tlv_ptr->value[0] << 24;
-            integer |= tlv_ptr->value[1] << 16;
-            integer |= tlv_ptr->value[2] << 8;
-            integer |= tlv_ptr->value[3];            
+            int integer = array_to_int(tlv_ptr->value);          
             printf("%d \n", integer);
             break;
         }
@@ -86,4 +79,21 @@ void print_tlv(tlv* tlv_ptr) {
             break;
         }
     }
+}
+
+
+void int_to_array(int integer, uint8_t* array) {
+    array[0] = (integer >> 24) & 0xFF;
+    array[1] = (integer >> 16) & 0xFF;
+    array[2] = (integer >> 8) & 0xFF;
+    array[3] = integer & 0xFF;
+}
+
+int array_to_int(uint8_t* array) {
+    int integer = array[0] << 24;
+    integer |= array[1] << 16;
+    integer |= array[2] << 8;
+    integer |= array[3];
+
+    return integer;
 }

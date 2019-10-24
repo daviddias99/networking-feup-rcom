@@ -11,7 +11,6 @@
 #define MB_TO_B(x)                  ((size_t) (x) << 20)   
 #define MAX_FILE_SIZE_B             MB_TO_B(MAX_FILE_SIZE_MB)
 
-#define MAX_PACKET_SIZE_B           4
 
 
 typedef struct file_info {
@@ -24,6 +23,11 @@ typedef enum packet_type {
     START,
     END
 } packet_type;
+
+
+void log_control_packet(uint8_t* packet, uint8_t packet_size);
+void log_data_packet(uint8_t* packet);
+
 
 
 #endif
