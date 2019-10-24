@@ -469,6 +469,8 @@ int transmitter_close(int fd) {
       }
     }
   }
+  log_debug("TRASNMITTER EXCEEDED NUM TRIES");
+  return -1;
 }
 
 
