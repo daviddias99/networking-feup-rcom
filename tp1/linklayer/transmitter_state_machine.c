@@ -22,10 +22,9 @@ void tsm_process_input(struct transmitter_state_machine* st_machine, uint8_t rec
       case T_STATE_FLAG_RCV:
 
         printf("At flag state \n");
+
         if(received_byte == ADDR_RECEIV_RES || received_byte == ADDR_RECEIV_COMMAND) {
-
           log_debug("STM: At FLAG state --> At ADDRESS state");
-
           st_machine->currentState = T_STATE_A_RCV;
           st_machine->frame[ADDR_INDEX] = received_byte;
         }
