@@ -17,7 +17,7 @@
 #define RECEIVER    0
 #define TRANSMITTER 1
 
-int llopen(int port, int flag);
+int llopen(int port, int role);
 int llwrite(int fd, char * buffer, int length);
 int llread(int fd, char * buffer);
 int llclose(int fd);

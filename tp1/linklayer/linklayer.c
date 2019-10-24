@@ -7,6 +7,7 @@ static int transmitter_open(int fd);
 static int receiver_open(int fd);
 static int serial_port_setup(int port);
 static void build_su_frame(uint8_t * buf, int address, int control);
+static int transmitter_close(int fd);
 
 typedef struct linklayer {
 
@@ -15,6 +16,7 @@ typedef struct linklayer {
   unsigned int sequenceNumber;
   unsigned int timeout;
   unsigned int numTransmissions;
+  int role;
   bool connectionEstablished;
 
   uint8_t frame[2];
@@ -24,14 +26,14 @@ linklayer_info connection_info;
 
 
 static struct termios oldtio;
-int flag = 1, conta = 1;
+int timedOut = 1, numTries = 1;
 
 int sequence_number = 0;
 
 static void alarm_handler(int signo) {
-  printf("alarme # %d\n", conta);
-	flag = 1;
-	conta++;
+  printf("alarme # %d\n", numTries);
+	timedOut = 1;
+	numTries++;
 }
 
 int sendUA(int fd)
@@ -78,10 +80,10 @@ bool valid_data_bcc(uint8_t frame[], size_t frame_size)
   return bcc_value == calculated_value;
 }
 
-int llopen(int port, int flag) {
+int llopen(int port, int role) {
   int fd = serial_port_setup(port);
-
-  switch (flag) {
+  connection_info.role = role;
+  switch (role) {
     case TRANSMITTER:
       return transmitter_open(fd);
     case RECEIVER:
@@ -149,7 +151,7 @@ int transmitter_open(int fd) {
   // State-machine setup
   struct transmitter_state_machine st_machine;
 
-  while (conta < 4) {
+  while (numTries < 4) {
    
         st_machine.currentState = T_STATE_START;
         res = write(fd, frame, SU_FRAME_SIZE);
@@ -159,11 +161,11 @@ int transmitter_open(int fd) {
         }            
         log_trace("-oh seu filha da puta T message sent to Receiver(%d bytes written)\n", res);
         alarm(3);                 // activates 3 sec alarm
-        flag=0;
+        timedOut=0;
      
 
         // wait for answer
-        while (! flag) {
+        while (! timedOut) {
 
           uint8_t currentByte;
           res = read(fd,&currentByte,1);                              // returns after a char has been read or after timer expired
@@ -261,19 +263,19 @@ int llwrite(int fd, char * buffer, int length) {
   int res;
   // State-machine setup
   struct transmitter_state_machine st_machine;
-	conta = 1;
-	flag = 1;
+	numTries = 1;
+	timedOut = 1;
 
-  while (conta < 4) {
+  while (numTries < 4) {
 
      
         st_machine.currentState = T_STATE_START;
         write_data(fd, buffer, length);
         alarm(3);                 // activates 3 sec alarm
-        flag = 0;
+        timedOut = 0;
 
         // wait for answer
-        while (!flag) {
+        while (!timedOut) {
 
           printf("entrou no while\n");
 
@@ -376,11 +378,31 @@ void build_su_frame(uint8_t * buf, int address, int control) {
   buf[4] = FLAG;
 }
 
-
-
 int llclose(int fd) {
   printf("-Closing connection...\n");
+  
+  switch (connection_info.role) {
+  case TRANSMITTER:
+    transmitter_close(fd);
+    break;
+  case RECEIVER:
+    break;
+  default:
+    break;
+  }
 
+  sleep(1);
+
+  if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {
+    perror("tcsetattr");
+    exit(-1);
+  }
+
+  return close(fd);
+}
+
+int transmitter_close(int fd) {
+  
   // Frame building
   uint8_t frame[SU_FRAME_SIZE];
   build_su_frame(frame, ADDR_TRANSM_COMMAND, CONTROL_DISC);
@@ -394,7 +416,7 @@ int llclose(int fd) {
   // State-machine setup
   struct transmitter_state_machine st_machine;
 
-  while (conta < 4) {
+  while (numTries < 4) {
         st_machine.currentState = T_STATE_START;
         res = write(fd, frame, SU_FRAME_SIZE);
         if (res == -1) {
@@ -403,10 +425,10 @@ int llclose(int fd) {
         }            
         log_trace("-oh seu filha da puta T message sent to Receiver(%d bytes written)\n", res);
         alarm(3);                 // activates 3 sec alarm
-        flag=0;
+        timedOut=0;
 
         // wait for answer
-        while (! flag) {
+        while (! timedOut) {
           uint8_t currentByte;
           res = read(fd,&currentByte,1);                              // returns after a char has been read or after timer expired
           printf("-Byte received from Receiver(0x%x)\n", currentByte);
@@ -425,12 +447,4 @@ int llclose(int fd) {
         }
   }
 
-  sleep(1);
-
-  if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {
-    perror("tcsetattr");
-    exit(-1);
-  }
-
-  return close(fd);
 }
