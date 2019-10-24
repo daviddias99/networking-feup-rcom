@@ -9,11 +9,11 @@ int main(int argc, char** argv)
     }
 
 
-    char buf[255];
+    uint8_t buf[255];
 
     while (true) {
     	printf("input: ");
-    	fgets(buf, 255, stdin);
+    	fgets((char*)buf, 255, stdin);
     	llwrite(fd, buf, strlen(buf) - 1);
       if (buf[0] == '0')
         break;

@@ -18,8 +18,8 @@
 #define TRANSMITTER 1
 
 int llopen(int port, int role);
-int llwrite(int fd, char * buffer, int length);
-int llread(int fd, char * buffer);
+int llwrite(int fd, uint8_t * buffer, int length);
+int llread(int fd, uint8_t * buffer);
 int llclose(int fd);
 
 #endif

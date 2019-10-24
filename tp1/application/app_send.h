@@ -9,12 +9,21 @@
 #include <fcntl.h>
 #include <string.h>
 
-#include "app.h"
+#include "./app.h"
+#include "./tlv.h"
+#include "./linklayer/linklayer.h"
 
 
+// TODO: change this value
+// this macro defines the number of bytes of data present in each packet
+#define MAX_PACKET_DATA             10
+#define PACKET_SIZE                 (4 + MAX_PACKET_DATA)
 
 
-int sendFile(char* file_path);
-int sendControlPacket(enum control_type type, char* arguments[], int argument_cnt);
+int send_file(char* file_path);
+uint8_t* build_control_packet(packet_type type, uint8_t* packet_size, tlv* tlv_list[], const uint8_t tlv_list_size);
+uint8_t* build_data_packet(uint8_t* data, uint8_t data_size);
+
+char* name_from_path(char* path);
 
 #endif

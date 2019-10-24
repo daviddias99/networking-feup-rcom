@@ -9,12 +9,12 @@ int main(int argc, char** argv)
     }
 
     
-    char buf[255];
+    uint8_t buf[255];
 
     while (true) {        
     	int result = llread(fd, buf);
       buf[result] = '\0';
-      printf("-- %d bytes read(%s)\n",result,buf);
+      printf("-- %d bytes read(%s)\n",result,(char*)buf);
       if (buf[0] == '0')
         break;
     }

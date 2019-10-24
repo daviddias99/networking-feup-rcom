@@ -239,12 +239,12 @@ int receiver_open(int fd) {
   return 0;
 }
 
-int write_data(int fd, char *buffer, int length)
+int write_data(int fd, uint8_t *buffer, int length)
 {
 
   int res = 0;
 
-  char frame[4];
+  uint8_t frame[4];
   frame[0] = FLAG;
   frame[1] = ADDR_TRANSM_COMMAND;
   frame[2] = sequence_number ? 0x40 : 0x00;
@@ -285,13 +285,49 @@ int write_data(int fd, char *buffer, int length)
   return res;
 }
 
+<<<<<<< HEAD
 int llwrite(int fd, char * buffer, int length) {
   return  write_frame(fd, DATA, buffer, length);
+=======
+int llwrite(int fd, uint8_t * buffer, int length) {
+
+  int res;
+  // State-machine setup
+  struct transmitter_state_machine st_machine;
+	numTries = 1;
+	timedOut = 1;
+
+  while (numTries < 4) {
+    st_machine.currentState = T_STATE_START;
+    res = write_data(fd, buffer, length);
+    alarm(3);                 // activates 3 sec alarm
+    timedOut = 0;
+
+    // wait for answer
+    while (!timedOut) {
+
+      uint8_t currentByte;
+      res = read(fd, &currentByte, 1);                              // returns after a char has been read or after timer expired
+      printf("-Byte received from Receiver(0x%x)\n", currentByte);
+      tsm_process_input(&st_machine, currentByte);                   // state-machine processes the read byte
+
+      if (st_machine.currentState == T_STATE_STOP) {
+          if (st_machine.frame[2] == ((sequence_number + 1) << 7) | CONTROL_RR_BASE) {
+            alarm(0);
+            sequence_number = (sequence_number + 1) % 2;
+            return res;
+          }
+      }
+    }
+  }
+  log_debug("TRASMITER EXCEED NUM TRIES\n");
+  return -1;
+>>>>>>> 86832a6c17de5852cdd93d7b3af255250202d33b
 }
 
 
 
-int llread(int fd, char* buffer){
+int llread(int fd, uint8_t* buffer){
 
   int res;
 
