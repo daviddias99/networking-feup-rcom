@@ -145,6 +145,7 @@ int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, char* buffe
 }
 
 int llopen(int port, int role) {
+
   struct sigaction alarm_action;
   alarm_action.sa_handler = alarm_handler;
   sigaction(SIGALRM, &alarm_action, NULL);

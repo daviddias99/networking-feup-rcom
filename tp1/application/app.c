@@ -8,10 +8,22 @@
 #include "./app_send.h"
 #include "./app_receive.h"
 
+int get_file_path_from_user(char* path){
+
+    printf("File path : ");
+    fflush(stdout);
+    fgets(path, 255, stdin);
+    log_debug("APP_T: Read path(%s) from user", path);
+    path[strlen(path) - 1] = '\0';
+
+    return 0;
+}
+
 
 int main(int argc, char const *argv[]) {
+
     if (argc != 2) {
-      printf("Usage:\tnserial Role\n\tex: serial_transfer receiver\n");
+      printf("Usage:\tserial_transfer Role\n\tex: serial_transfer receiver\n");
       exit(1);
     }
 
@@ -28,11 +40,8 @@ int main(int argc, char const *argv[]) {
     char path[255];
 
     if (role){
-        printf("File path : ");
-        fflush(stdout);
-        fgets(path, 255, stdin);
-        printf("path after read %s\n", path);
-        path[strlen(path) - 1] = '\0';
+       
+        get_file_path_from_user(path);
         send_file(path);
     }
     else {
