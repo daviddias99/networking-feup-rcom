@@ -37,7 +37,7 @@ int receive_file(int port) {
             break;
         }
         else if (packet[0] != DATA) {
-            printf("Found unexpected type\n");
+            printf("Found unexpected type %d\n", packet[0]);
             exit(1);
         }
 

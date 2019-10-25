@@ -286,10 +286,9 @@ int write_data(int fd, uint8_t *buffer, int length)
 }
 
 int llwrite(int fd, uint8_t * buffer, int length) {
-  return  write_frame(fd, DATA, buffer, length);
+  write_frame(fd, DATA, buffer, length);
+  return length;
 }
-
-
 
 int llread(int fd, uint8_t* buffer){
 
@@ -373,7 +372,7 @@ int transmitter_close(int fd) {
 
 
 int write_frame(int fd, int type, char * buffer, size_t length) {
-  int res;
+  int nWritten, res;
   struct transmitter_state_machine st_machine;
   
   numTries = 1;
@@ -384,9 +383,9 @@ int write_frame(int fd, int type, char * buffer, size_t length) {
     st_machine.currentState = T_STATE_START;
     
     if (type == DATA)
-      res = write_data(fd, buffer, length);
+      nWritten = write_data(fd, buffer, length);
     else {
-      res = write(fd, buffer, SU_FRAME_SIZE);
+      nWritten = write(fd, buffer, SU_FRAME_SIZE);
       log_debug("TRANSMITTER: sent to transmitter(%x %x %x %x %x) (%d bytes written)\n",buffer[0],buffer[1],buffer[2],buffer[3],buffer[4], res);
     }
     alarm(3);                 // activates 3 sec alarm
@@ -406,7 +405,7 @@ int write_frame(int fd, int type, char * buffer, size_t length) {
           if (st_machine.frame[2] == ((sequence_number + 1) << 7) | CONTROL_RR_BASE) {
             
             sequence_number = (sequence_number + 1) % 2;
-            return 0;
+            return nWritten;
           }
         }
         else if (type == OPEN) {
