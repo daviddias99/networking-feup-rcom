@@ -51,16 +51,14 @@ int send_file(char* file_path) {
 
     int nWritten;
 
-    do {
-        nWritten = llwrite(serial_port_fd, control_packet,control_packet_size);
+    log_control_packet(control_packet, control_packet_size);
 
+    do {
+        printf("\nCONTROL PACKET SIZE SEND: %d\n\n", control_packet_size);
+        nWritten = llwrite(serial_port_fd, control_packet,control_packet_size);
     } while(nWritten != control_packet_size);
 
-
-
     while ((bytes_read = read(file_fd, file_data, MAX_PACKET_DATA)) > 0) {
-
-
         uint8_t* data_packet;
         if ((data_packet = build_data_packet((uint8_t *) file_data, bytes_read)) == NULL) {
             perror("Error!\n");
@@ -109,7 +107,7 @@ uint8_t* build_control_packet(packet_type type, uint8_t* packet_size, tlv* tlv_l
     printf("control packet size : %d\n", *packet_size);
 
     for (uint8_t i = 0; i < tlv_list_size; i++) {
-        *packet_size += tlv_list[i]->length;
+        *packet_size += tlv_list[i]->length + ;
         printf("control packet size : %d\n", *packet_size);
     }
 
@@ -129,6 +127,8 @@ uint8_t* build_control_packet(packet_type type, uint8_t* packet_size, tlv* tlv_l
 
         packet[packet_index] = tlv_list[i]->length;
         packet_index++;
+
+        *packet_size += 2;
 
         for (uint8_t j = 0; j < tlv_list[i]->length; j++) {
             packet[packet_index] = tlv_list[i]->value[j];

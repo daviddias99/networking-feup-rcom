@@ -16,6 +16,7 @@ int receive_file(int port) {
 
     uint8_t packet[512];
     int bytes_read = llread(port_fd, packet);
+    log_control_packet(packet, bytes_read);
 
     if (packet[0] != START) {
         printf("Expected start packet\n");
@@ -23,6 +24,7 @@ int receive_file(int port) {
     }
 
     control_info* start_info = create_control_info(packet, bytes_read);
+    log_control_packet(packet, bytes_read);
 
 
     FILE* file_ptr = fopen(start_info->file_name, "wb");
@@ -74,6 +76,8 @@ int receive_file(int port) {
 }
 
 control_info* create_control_info(uint8_t* packet, const size_t packet_size) {
+    log_control_packet(packet, packet_size);
+
     if (packet[0] != END && packet[0] != START) {
         printf("Unexpected packet type\n");
         return NULL;
@@ -101,7 +105,6 @@ control_info* create_control_info(uint8_t* packet, const size_t packet_size) {
             }
             case FILE_NAME:
             {
-                log_control_packet(packet, packet_size);
                 info->file_name = strndup(packet + packet_index, length);
                 printf("file name : %s\n", info->file_name);
                 if (info->file_name == NULL) {
