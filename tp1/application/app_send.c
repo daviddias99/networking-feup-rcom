@@ -3,33 +3,39 @@
 // FIXME: review code and use const in the defined functions
 
 int send_file(char* file_path) {
-    printf("file path %s after send_file\n", file_path);
+
+    log_debug("APP_T: Start file(%s) sending to receiver procedure", file_path);
+
+    log_debug("APP_T: Opening the file...");
+
+    // open the file to send
     int file_fd = open(file_path, O_RDONLY);
     if (file_fd == -1){
-        log_debug("%s", file_path);
         perror("File does not exist \n");
         exit(1);
     }
 
-    struct stat file_st; /*= malloc(sizeof(stat));
-    if (file_st == NULL) {
-        perror("Unable to allocate memory \n");
-        exit(1);
-    } */
+    log_debug("APP_T: Retreiving file information...");
 
-
+    // retreive file information
+    struct stat file_st;
     if (fstat(file_fd, &file_st) < 0) {
         perror("Unable to get file info \n");
-        //free(file_st);
         exit(1);
     }
 
+    // create control packet segments
 
     const uint8_t tlv_list_size = 2;
     tlv* tlv_list[tlv_list_size];
     tlv_list[0] = create_tlv_int(FILE_SIZE, file_st.st_size);
     tlv_list[1] = create_tlv_str(FILE_NAME, name_from_path(file_path));
 
+    log_debug("APP_T: Creating control packet tlv segments...");
+    log_debug("APP_T: TLV[0] -type:%d -length:%d -value:%d ",tlv_list[0]->type,tlv_list[0]->length,*(int*)tlv_list[0]->value);
+    log_debug("APP_T: TLV[1] -type:%d -length:%d -value:%s ",tlv_list[0]->type,tlv_list[0]->length,(char*)tlv_list[0]->value);
+
+    // build the control packet
 
     uint8_t* control_packet;
     uint8_t control_packet_size;
@@ -38,26 +44,34 @@ int send_file(char* file_path) {
         return -1;
     }
 
+    log_debug("APP_T: Building control packet(%d bytes)",control_packet_size);
 
     char* file_data[MAX_PACKET_DATA];
     uint8_t bytes_read;
 
     int serial_port_fd;
 
+    // open the serial port
+
     do{
+        log_debug("APP_T: attempting to open serial port...");
         serial_port_fd = llopen(0,TRANSMITTER);
         sleep(1);
     }while(serial_port_fd < 0);
 
     int nWritten;
 
-    log_control_packet(control_packet, control_packet_size);
+    // send the start control packet
 
     do {
         printf("\nCONTROL PACKET SIZE SEND: %d\n\n", control_packet_size);
         nWritten = llwrite(serial_port_fd, control_packet,control_packet_size);
+        log_debug("APP_T: Writting control packet(START) to serial port (%d bytes written)",nWritten);
+
     } while(nWritten != control_packet_size);
 
+
+    // read chunks of the outbound file and send them to the receiver
     while ((bytes_read = read(file_fd, file_data, MAX_PACKET_DATA)) > 0) {
         uint8_t* data_packet;
         if ((data_packet = build_data_packet((uint8_t *) file_data, bytes_read)) == NULL) {
@@ -68,8 +82,11 @@ int send_file(char* file_path) {
         log_data_packet((char*) data_packet);
         printf("\n");
 
+        // send the packet through the serial port
+
         do{
             nWritten = llwrite(serial_port_fd, data_packet, bytes_read + 4);
+            log_debug("APP_T: Writting data packet to serial port (%d bytes written)",nWritten);
 
         } while (nWritten != bytes_read + 4);
         free(data_packet);
@@ -83,8 +100,11 @@ int send_file(char* file_path) {
     // TODO: modify start packet to send end packet
     control_packet[0] = END;
 
+    // send the END control packet
     do{
+
         nWritten = llwrite(serial_port_fd,control_packet,control_packet_size);
+        log_debug("APP_T: Writting control packet(END) to serial port (%d bytes written)",nWritten);
 
     }while(nWritten != control_packet_size);
 
@@ -93,6 +113,9 @@ int send_file(char* file_path) {
         destroy_tlv(tlv_list[i]);
     }
 
+    // close the connection
+
+    log_debug("APP_T: Closing the connection with the receiver..." );
     llclose(serial_port_fd);
     free(control_packet);
     close(file_fd);

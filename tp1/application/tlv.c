@@ -83,17 +83,11 @@ void print_tlv(tlv* tlv_ptr) {
 
 
 void int_to_array(int integer, uint8_t* array) {
-    array[0] = (integer >> 24) & 0xFF;
-    array[1] = (integer >> 16) & 0xFF;
-    array[2] = (integer >> 8) & 0xFF;
-    array[3] = integer & 0xFF;
+
+    *(int*)array = integer;
 }
 
 int array_to_int(uint8_t* array) {
-    int integer = array[0] << 24;
-    integer |= array[1] << 16;
-    integer |= array[2] << 8;
-    integer |= array[3];
 
-    return integer;
+    return *(int*)array;;
 }
