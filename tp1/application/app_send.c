@@ -73,7 +73,7 @@ int send_file(char* file_path) {
         do{
             nWritten = llwrite(serial_port_fd, data_packet, bytes_read + 4);
 
-        } while (nWritten != control_packet_size);
+        } while (nWritten != bytes_read + 4);
         free(data_packet);
     }
 
@@ -94,10 +94,10 @@ int send_file(char* file_path) {
     for (uint8_t i = 0; i < sizeof(tlv_list) / sizeof(tlv*); i++) {
         destroy_tlv(tlv_list[i]);
     }
+
+    llclose(serial_port_fd);
     free(control_packet);
-
     close(file_fd);
-
 
     return 0;
 }
@@ -106,11 +106,11 @@ int send_file(char* file_path) {
 uint8_t* build_control_packet(packet_type type, uint8_t* packet_size, tlv* tlv_list[], const uint8_t tlv_list_size) {
 
     *packet_size = 1;
-    printf("control packet size : %d\n", packet_size);
+    printf("control packet size : %d\n", *packet_size);
 
     for (uint8_t i = 0; i < tlv_list_size; i++) {
         *packet_size += tlv_list[i]->length;
-        printf("control packet size : %d\n", packet_size);
+        printf("control packet size : %d\n", *packet_size);
     }
 
     uint8_t* packet = malloc(*packet_size);
