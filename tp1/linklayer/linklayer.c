@@ -151,6 +151,7 @@ int llopen(int port, int role) {
   alarm_action.sa_handler = alarm_handler;
   sigaction(SIGALRM, &alarm_action, NULL);
 
+
   int fd = serial_port_setup(port);
   connection_info.role = role;
   switch (role) {
@@ -404,20 +405,21 @@ int write_frame(int fd, int type, char * buffer, size_t length) {
       tsm_process_input(&st_machine, currentByte);                   // state-machine processes the read byte
 
       if (st_machine.currentState == T_STATE_STOP) {
-        alarm(0);
-        if (type == DATA) {
+       if (type == DATA) {
           if (st_machine.frame[2] == ((sequence_number + 1) << 7) | CONTROL_RR_BASE) {
-
+            alarm(0);
+        
             sequence_number = (sequence_number + 1) % 2;
             return n_written;
           }
         }
         else if (type == OPEN) {
-
+          alarm(0);
+        
           return fd;
         }
         else if (type == CLOSE) {
-
+          alarm(0);
 
           uint8_t response[SU_FRAME_SIZE];
           build_su_frame(response, ADDR_TRANSM_RES, CONTROL_UA);

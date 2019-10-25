@@ -16,7 +16,7 @@
 
 // TODO: change this value
 // this macro defines the number of bytes of data present in each packet
-#define MAX_PACKET_DATA             10
+#define MAX_PACKET_DATA             200
 #define PACKET_SIZE                 (4 + MAX_PACKET_DATA)
 
 
