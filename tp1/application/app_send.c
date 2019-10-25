@@ -53,11 +53,14 @@ int send_file(char* file_path) {
 
     // open the serial port
 
-    do{
-        log_debug("APP_T: attempting to open serial port...");
-        serial_port_fd = llopen(0,TRANSMITTER);
+    log_debug("APP_T: attempting to open serial port...");
+    serial_port_fd = llopen(0,TRANSMITTER);
+
+    while(serial_port_fd < 0){
         sleep(1);
-    }while(serial_port_fd < 0);
+        log_debug("APP_T: attempting to open serial port...");
+        serial_port_fd = llopen(0,TRANSMITTER);  
+    }
 
     int nWritten;
 
