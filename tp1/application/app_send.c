@@ -33,7 +33,7 @@ int send_file(char* file_path) {
 
     log_debug("APP_T: Creating control packet tlv segments...");
     log_debug("APP_T: TLV[0] -type:%d -length:%d -value:%d ",tlv_list[0]->type,tlv_list[0]->length,*(int*)tlv_list[0]->value);
-    log_debug("APP_T: TLV[1] -type:%d -length:%d -value:%s ",tlv_list[0]->type,tlv_list[0]->length,(char*)tlv_list[0]->value);
+    log_debug("APP_T: TLV[1] -type:%d -length:%d -value:%s ",tlv_list[0]->type,tlv_list[0]->length,(char*)tlv_list[1]->value);
 
     // build the control packet
 
