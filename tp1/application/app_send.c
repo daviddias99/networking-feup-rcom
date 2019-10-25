@@ -17,7 +17,7 @@ int send_file(char* file_path) {
         exit(1);
     } */
 
-    
+
     if (fstat(file_fd, &file_st) < 0) {
         perror("Unable to get file info \n");
         //free(file_st);
@@ -33,7 +33,6 @@ int send_file(char* file_path) {
 
     uint8_t* control_packet;
     uint8_t control_packet_size;
-    log_debug("control packet size = %d\n", control_packet_size);
     if ((control_packet = build_control_packet(START, &control_packet_size, tlv_list, tlv_list_size)) == NULL) {
         printf("Unable to build start packet\n");
         return -1;
@@ -54,13 +53,13 @@ int send_file(char* file_path) {
 
     do {
         nWritten = llwrite(serial_port_fd, control_packet,control_packet_size);
-        log_control_packet(control_packet, control_packet_size);
-        log_debug("cp size = %d | n written = %d \n", control_packet_size, nWritten);
+
     } while(nWritten != control_packet_size);
 
-    
+
+
     while ((bytes_read = read(file_fd, file_data, MAX_PACKET_DATA)) > 0) {
-        
+
 
         uint8_t* data_packet;
         if ((data_packet = build_data_packet((uint8_t *) file_data, bytes_read)) == NULL) {
@@ -74,7 +73,7 @@ int send_file(char* file_path) {
         do{
             nWritten = llwrite(serial_port_fd, data_packet, bytes_read + 4);
 
-        } while (nWritten != bytes_read + 4);
+        } while (nWritten != control_packet_size);
         free(data_packet);
     }
 
@@ -99,19 +98,20 @@ int send_file(char* file_path) {
 
     close(file_fd);
 
-    llclose(serial_port_fd);
 
     return 0;
 }
 
 // TODO: modify this function to build only the start packet
 uint8_t* build_control_packet(packet_type type, uint8_t* packet_size, tlv* tlv_list[], const uint8_t tlv_list_size) {
-    
-    *packet_size = 1;
-    for (uint8_t i = 0; i < tlv_list_size; i++)
-        *packet_size += tlv_list[i]->length;
 
-    printf("control packet size : %d\n", *packet_size);
+    *packet_size = 1;
+    printf("control packet size : %d\n", packet_size);
+
+    for (uint8_t i = 0; i < tlv_list_size; i++) {
+        *packet_size += tlv_list[i]->length;
+        printf("control packet size : %d\n", packet_size);
+    }
 
     uint8_t* packet = malloc(*packet_size);
     if (packet == NULL) {
@@ -123,7 +123,7 @@ uint8_t* build_control_packet(packet_type type, uint8_t* packet_size, tlv* tlv_l
 
     uint8_t packet_index = 1;
     for (uint8_t i = 0; i < tlv_list_size; i++) {
-        
+
         packet[packet_index] = tlv_list[i]->type;
         packet_index++;
 
@@ -135,8 +135,6 @@ uint8_t* build_control_packet(packet_type type, uint8_t* packet_size, tlv* tlv_l
             packet_index++;
         }
     }
-
-    log_control_packet(packet, packet_size);
 
     return packet;
 }

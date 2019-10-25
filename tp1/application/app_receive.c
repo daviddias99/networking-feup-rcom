@@ -8,52 +8,60 @@
 int receive_file(int port) {
 
     int port_fd = llopen(port, RECEIVER);
+    printf("port fd : %d\n", port_fd);
     if (port_fd < 0) {
-        log_debug("No communication established\n");
+        printf("No communication established\n");
         exit(1);
     }
 
     uint8_t packet[512];
-    llread(port_fd, packet);
-    
+    int bytes_read = llread(port_fd, packet);
+
     if (packet[0] != START) {
-        log_debug("Expected start packet\n");
+        printf("Expected start packet\n");
         exit(1);
     }
 
-    control_info* start_info = create_control_info(packet);
+    control_info* start_info = create_control_info(packet, bytes_read);
 
+
+    FILE* file_ptr = fopen(start_info->file_name, "wb");
+    /*
     int file_fd = open(start_info->file_name, O_CREAT | O_WRONLY);
     if (file_fd == -1) {
         perror("Unable to create file\n");
         exit(1);
     }
+    */
 
 
-    int bytes_read;
-    while ((bytes_read = llread(file_fd, packet)) > 0) {
+    while ((bytes_read = llread(port_fd, packet)) > 0) {
 
         if (packet[0] == END) {
             break;
         }
         else if (packet[0] != DATA) {
-            log_debug("Found unexpected type\n");
+            printf("Found unexpected type : %d\n\n", packet[0]);
+
+            log_control_packet(packet, bytes_read);
+
             exit(1);
         }
 
-        write(file_fd, packet + 4, bytes_read - 4);
+        fwrite(packet + 4, 1, bytes_read - 4, file_ptr);
+        //write(file_fd, packet + 4, bytes_read - 4);
     }
 
     if (bytes_read < 0) {
-        log_debug("Error while reading\n");
+        printf("Error while reading\n");
         exit(1);
-    } 
+    }
 
-    control_info* end_info = create_control_info(packet);
+    control_info* end_info = create_control_info(packet, bytes_read);
 
     // Check if start and end packets carried the same information
     if (compare_control_info(start_info, end_info) == 0) {
-        log_debug("Start and end packets carried different information\n");
+        printf("Start and end packets carried different information\n");
     }
 
     // TODO: check if the written file as the same size as the one on the control packets
@@ -61,25 +69,25 @@ int receive_file(int port) {
     destroy_control_info(start_info);
     destroy_control_info(end_info);
 
-    close(file_fd);
+    //close(file_fd);
     llclose(port_fd);
 }
 
-control_info* create_control_info(uint8_t* packet) {
+control_info* create_control_info(uint8_t* packet, const size_t packet_size) {
     if (packet[0] != END && packet[0] != START) {
-        log_debug("Unexpected packet type\n");
+        printf("Unexpected packet type\n");
         return NULL;
     }
 
     control_info* info = malloc(sizeof(control_info));
     if (info == NULL) {
-        log_debug("Unable to allocate memory\n");
+        printf("Unable to allocate memory\n");
         return NULL;
     }
 
-    size_t packet_index = 1;    
+    size_t packet_index = 1;
 
-    while (1) {
+    while (packet_index < packet_size) {
         int type = packet[packet_index];
         packet_index++;
         uint8_t length = packet[packet_index];
@@ -92,21 +100,23 @@ control_info* create_control_info(uint8_t* packet) {
                 break;
             }
             case FILE_NAME:
-            {  
+            {
+                log_control_packet(packet, packet_size);
                 info->file_name = strndup(packet + packet_index, length);
+                printf("file name : %s\n", info->file_name);
                 if (info->file_name == NULL) {
-                    log_debug("Error allocating memory for file name\n");
+                    printf("Error allocating memory for file name\n");
                     return NULL;
                 }
                 break;
             }
             default:
             {
-                log_debug("Found unexpected parameter type\n");
+                printf("Found unexpected parameter type\n");
                 return NULL;
             }
         }
-        
+
         packet_index += length;
     }
     return info;

@@ -12,7 +12,7 @@ typedef struct control_info_st {
     int file_size;
 } control_info;
 
-control_info* create_control_info(uint8_t* packet);
+control_info* create_control_info(uint8_t* packet, const size_t packet_size);
 void destroy_control_info(control_info* info);
 int compare_control_info(control_info* start_info, control_info* end_info);
 

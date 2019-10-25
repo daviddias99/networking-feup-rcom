@@ -24,7 +24,7 @@ typedef struct linklayer {
   uint8_t frame[2];
 } linklayer_info;
 
-linklayer_info connection_info; 
+linklayer_info connection_info;
 
 
 static struct termios oldtio;
@@ -89,7 +89,7 @@ int process_read_su_frame(int fd, uint8_t frame[]){
     sendUA(fd); /* Send unnumbered acknowledgement to sender */
     connection_info.sequenceNumber = 0;
     connection_info.connectionEstablished = true;
-    
+
     return CONTROL_SET;
   }
   else if(frame[CTRL_INDEX] == CONTROL_DISC){
@@ -276,7 +276,7 @@ int write_data(int fd, uint8_t *buffer, int length)
   } else {
     res += write(fd, &bcc2, 1);
   }
-  
+
   frame[0] = FLAG;
   res += write(fd, frame, 1);
 
@@ -285,10 +285,11 @@ int write_data(int fd, uint8_t *buffer, int length)
   return res;
 }
 
-int llwrite(int fd, uint8_t * buffer, int length) {
-  write_frame(fd, DATA, buffer, length);
-  return length;
+int llwrite(int fd, uint8_t* buffer, int length) {
+  return  write_frame(fd, DATA, buffer, length);
 }
+
+
 
 int llread(int fd, uint8_t* buffer){
 
@@ -303,11 +304,11 @@ int llread(int fd, uint8_t* buffer){
   while (true)
   { /* loop for input */
 
-    
+
     uint8_t currentByte;
     res = read(fd, &currentByte, 1); /* returns after a char has been read or after timer expired */
-    
-    log_debug("RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte,(char)currentByte,res);
+
+    log_debug("RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte, (char) currentByte, res);
     sm_processInput(&st_machine, currentByte); /* state-machine processes the read byte */
 
     if(st_machine.currentState == R_STATE_SU_STOP){
@@ -321,7 +322,7 @@ int llread(int fd, uint8_t* buffer){
       if(nRead < 0)
         continue;
       else
-        return nRead; 
+        return nRead;
     }
   }
 
@@ -339,7 +340,7 @@ void build_su_frame(uint8_t * buf, int address, int control) {
 
 int llclose(int fd) {
   printf("\n\n-CLOSING CONNECTION...\n\n");
-  
+
   switch (connection_info.role) {
   case TRANSMITTER:
     transmitter_close(fd);
@@ -362,30 +363,30 @@ int llclose(int fd) {
 }
 
 int transmitter_close(int fd) {
-  
+
   // Frame building
   uint8_t frame[SU_FRAME_SIZE];
   build_su_frame(frame, ADDR_TRANSM_COMMAND, CONTROL_DISC);
-  
+
   return write_frame(fd, CLOSE, frame, 0);
 }
 
 
 int write_frame(int fd, int type, char * buffer, size_t length) {
-  int nWritten, res;
+  int res;
   struct transmitter_state_machine st_machine;
-  
+
   numTries = 1;
   timedOut = 1;
 
   while (numTries < 4) {
 
     st_machine.currentState = T_STATE_START;
-    
+
     if (type == DATA)
-      nWritten = write_data(fd, buffer, length);
+      res = write_data(fd, buffer, length);
     else {
-      nWritten = write(fd, buffer, SU_FRAME_SIZE);
+      res = write(fd, buffer, SU_FRAME_SIZE);
       log_debug("TRANSMITTER: sent to transmitter(%x %x %x %x %x) (%d bytes written)\n",buffer[0],buffer[1],buffer[2],buffer[3],buffer[4], res);
     }
     alarm(3);                 // activates 3 sec alarm
@@ -403,18 +404,18 @@ int write_frame(int fd, int type, char * buffer, size_t length) {
         alarm(0);
         if (type == DATA) {
           if (st_machine.frame[2] == ((sequence_number + 1) << 7) | CONTROL_RR_BASE) {
-            
+
             sequence_number = (sequence_number + 1) % 2;
-            return nWritten;
+            return 0;
           }
         }
         else if (type == OPEN) {
-          
+
           return fd;
         }
         else if (type == CLOSE) {
-          
-          
+
+
           uint8_t response[SU_FRAME_SIZE];
           build_su_frame(response, ADDR_TRANSM_RES, CONTROL_UA);
 
@@ -454,7 +455,7 @@ int receiver_close(int fd) {
 
     uint8_t currentByte;
     res = read(fd, &currentByte, 1); /* returns after a char has been read or after timer expired */
-    
+
     log_debug("RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte,(char)currentByte,res);
     sm_processInput(&st_machine, currentByte); /* state-machine processes the read byte */
 
@@ -476,12 +477,12 @@ int receiver_close(int fd) {
         alarm(3);
         timedOut = 0;
         disconnecting = true;
-      } 
+      }
       else if((process_result == CONTROL_UA) && disconnecting){
         log_debug("RECEIVER: UA received, returning...");
         alarm(0);
         return 0;
-      } 
+      }
     }
   }
 
