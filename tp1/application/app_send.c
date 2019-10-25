@@ -130,7 +130,7 @@ uint8_t* build_control_packet(packet_type type, uint8_t* packet_size, tlv* tlv_l
     printf("control packet size : %d\n", *packet_size);
 
     for (uint8_t i = 0; i < tlv_list_size; i++) {
-        *packet_size += tlv_list[i]->length + ;
+        *packet_size += tlv_list[i]->length;
         printf("control packet size : %d\n", *packet_size);
     }
 
