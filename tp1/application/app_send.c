@@ -136,6 +136,8 @@ uint8_t* build_control_packet(packet_type type, uint8_t* packet_size, tlv* tlv_l
         }
     }
 
+    log_control_packet(packet, packet_size);
+
     return packet;
 }
 
