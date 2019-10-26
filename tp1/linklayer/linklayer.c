@@ -17,26 +17,21 @@ typedef struct linklayer
   char port[20];
   int baudRate;
   unsigned int sequenceNumber;
-  unsigned int timeout;
-  unsigned int numTransmissions;
   int role;
   bool connectionEstablished;
 
-  uint8_t frame[2];
 } linklayer_info;
 
 linklayer_info connection_info;
 
-static struct termios oldtio;
+static struct termios oldtio;     // Starting serial port settings (set after successful serial_port_setup)
 int timedOut = 1, numTries = 1;
-
 FILE* log_file;
 
-int sequence_number = 0;
 
 static void alarm_handler(int signo)
 {
-  printf("alarme # %d\n", numTries);
+  log_debug("Alarm # %d\n", numTries);
   timedOut = 1;
   numTries++;
 }
@@ -55,6 +50,7 @@ int sendUA(int fd)
 
 int sendAck(int fd, bool type, int sequence_no)
 {
+  // Build the control byte of the ACK frame
   uint8_t sequence_byte = sequence_no ? BIT(7) : 0x00;
   uint8_t control_byte = type ? (CONTROL_RR_BASE | sequence_byte) : (CONTROL_REJ_BASE | sequence_byte);
   uint8_t response[SU_FRAME_SIZE];
@@ -73,15 +69,15 @@ int sendAck(int fd, bool type, int sequence_no)
 bool valid_data_bcc(uint8_t frame[], size_t frame_size)
 {
 
-  uint8_t bcc_value = frame[frame_size - 2];
+  const int BCC2_INDEX = frame_size - 2;
+  const int I_FRAME_DATA_END_INDEX = frame_size - 3;
+
+  uint8_t bcc_value = frame[BCC2_INDEX];
   uint8_t calculated_value = 0;
 
-  for (int i = I_FRAME_DATA_START_INDEX; i < frame_size - 2; i++)
-  {
-
+  for (int i = I_FRAME_DATA_START_INDEX; i <= I_FRAME_DATA_END_INDEX; i++)
     calculated_value ^= frame[i];
-  }
-
+  
   return bcc_value == calculated_value;
 }
 
@@ -91,15 +87,14 @@ int process_read_su_frame(int fd, uint8_t frame[])
   if (frame[CTRL_INDEX] == CONTROL_SET)
   {
 
-    sendUA(fd); /* Send unnumbered acknowledgement to sender */
-    connection_info.sequenceNumber = 0;
+    sendUA(fd);  // Send unnumbered acknowledgement to sender 
+    connection_info.sequenceNumber = 0; // The data transfer is about to start, so the sequence number is set to 0
     connection_info.connectionEstablished = true;
 
     return CONTROL_SET;
   }
   else if (frame[CTRL_INDEX] == CONTROL_DISC)
   {
-
     return CONTROL_DISC;
   }
   else if (frame[CTRL_INDEX] == CONTROL_UA)
@@ -112,38 +107,41 @@ int process_read_su_frame(int fd, uint8_t frame[])
 int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, char *buffer)
 {
 
+  const int I_FRAME_DATA_END_INDEX = frame_size - 3;
   bool isDataBCCValid = valid_data_bcc(frame, frame_size);
 
   if (isDataBCCValid)
-  { // if the data bcc is valid check for the sequence number
+  { // If the data bcc is valid check for the sequence number
 
     log_debug("RECEIVER: Data BCC is valid");
-    int packetSeqNumber = frame[CTRL_INDEX] >> 6;
+    int packetSeqNumber = frame[CTRL_INDEX] >> 6; // The sequence number is bit #6 of the control byte
 
     log_debug("RECEIVER: Received frame with seq=%d, desired was seq=%d", packetSeqNumber, connection_info.sequenceNumber);
     if (packetSeqNumber == connection_info.sequenceNumber)
-    { // correct sequence number, send ack with next seq number
+    { // Correct sequence number, send ack with next seq number
 
-      int nextSeqNumber = connection_info.sequenceNumber ? 0 : 1;
-      sendAck(fd, true, nextSeqNumber);
-      connection_info.sequenceNumber = nextSeqNumber;
+      int nextSeqNumber = connection_info.sequenceNumber ? 0 : 1;   // Calculate next sequence number
+      sendAck(fd, true, nextSeqNumber);                             // Send ACK to receiver
+      connection_info.sequenceNumber = nextSeqNumber;               // Update the sequence number
 
-      // copy read frame to frame storage
+      // Copy read frame to frame storage
       int i;
 
-      for (i = I_FRAME_DATA_START_INDEX; i < frame_size - 2; i++)
+      for (i = I_FRAME_DATA_START_INDEX; i <= I_FRAME_DATA_END_INDEX; i++)
         buffer[i - I_FRAME_DATA_START_INDEX] = frame[i];
 
-      return i - I_FRAME_DATA_START_INDEX;
+      int read_data_byte_count = i - I_FRAME_DATA_START_INDEX;
+
+      return read_data_byte_count;
     }
     else
-    { // duplicate frame, discard and send ack
+    { // Duplicate frame, discard and send ack
       log_debug("RECEIVER: duplicate frame received");
       sendAck(fd, true, connection_info.sequenceNumber);
     }
   }
   else
-  { // if the data bcc is invalid send nack asking for the same frame
+  { // If the data bcc is invalid send nack asking for the same frame
     log_debug("RECEIVER: Data BCC is invalid");
     sendAck(fd, false, connection_info.sequenceNumber);
   }
@@ -153,19 +151,22 @@ int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, char *buffe
 
 int llopen(int port, int role)
 {
+  
+  log_file = fopen(LOG_FILE,"w"); // Setup logging file
+  log_set_fp(log_file);           // Make logging output to file
+  log_set_quiet(1);               // Stop logging from showing in stdout
 
-  log_file = fopen("ll_log.txt","w");
-
-  log_set_fp(log_file);
-  log_set_quiet(1);
-
+  // Setup timeout alarm
   struct sigaction alarm_action;
   memset(&alarm_action, 0, sizeof alarm_action);
   alarm_action.sa_handler = alarm_handler;
   sigaction(SIGALRM, &alarm_action, NULL);
 
+  // Setup the serial port
   int fd = serial_port_setup(port);
+  
   connection_info.role = role;
+
   switch (role)
   {
   case TRANSMITTER:
@@ -182,8 +183,6 @@ int serial_port_setup(int port)
   char port_path[PORT_PATH_LENGTH];
   sprintf(port_path, "/dev/ttyS%d", port);
 
-  printf("portpath: %s\n", port_path);
-
   int fd = open(port_path, O_RDWR | O_NOCTTY);
   if (fd < 0)
   {
@@ -194,21 +193,22 @@ int serial_port_setup(int port)
   struct termios newtio;
 
   if (tcgetattr(fd, &oldtio) == -1)
-  { /* save current port settings */
+  { // Save current port settings 
     perror("tcgetattr");
     return -1;
   }
 
+  // Serial port configuration
   bzero(&newtio, sizeof(newtio));
   newtio.c_cflag = BAUDRATE | CS8 | CLOCAL | CREAD;
   newtio.c_iflag = IGNPAR;
   newtio.c_oflag = 0;
 
-  /* set input mode (non-canonical, no echo,...) */
+  // Set input mode (non-canonical, no echo,...) 
   newtio.c_lflag = 0;
 
-  newtio.c_cc[VTIME] = VTIME_VALUE; /* inter-character timer unused */
-  newtio.c_cc[VMIN] = VMIN_VALUE;   /* blocking read until 5 chars received */
+  newtio.c_cc[VTIME] = VTIME_VALUE;   // Inter-character timer unused 
+  newtio.c_cc[VMIN] = VMIN_VALUE;     // Blocking read until 5 chars received 
 
   tcflush(fd, TCIOFLUSH);
 
@@ -218,43 +218,56 @@ int serial_port_setup(int port)
     return -1;
   }
 
-  printf("New termios structure set\n");
+  log_debug("Serial port configuration set (port_path:%s)",port_path);
 
   return fd;
 }
 
 int transmitter_open(int fd)
 {
-  printf("-Establishing connection...\n");
+  log_debug("TRANSMITTER: Establishing connection...");
 
   // Frame building
   uint8_t frame[SU_FRAME_SIZE];
   build_su_frame(frame, ADDR_TRANSM_COMMAND, CONTROL_SET);
+
+  // Linklayer connection info initial values
   connection_info.connectionEstablished = false;
   connection_info.sequenceNumber = 0;
+
+  // Write SU-Open frame
   return write_frame(fd, OPEN, frame, 0);
 }
 
 int receiver_open(int fd)
 {
 
-  int res;
+  int read_bytes_cnt;
 
+  // Receiver state machine setup
   struct su_frame_rcv_state_machine st_machine;
   st_machine.currentState = R_STATE_START;
   st_machine.connectionEstablished = false;
   st_machine.currentByte_idx = 0;
+
+  // Linklayer connection info initial values
   connection_info.connectionEstablished = false;
   connection_info.sequenceNumber = 0;
 
+  // Frame listening
   while (true)
   {
     uint8_t currentByte;
-    res = read(fd, &currentByte, 1); /* returns after a char has been read or after timer expired */
 
-    log_debug("RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte, (char)currentByte, res);
-    sm_processInput(&st_machine, currentByte); /* state-machine processes the read byte */
+    // Read a byte from the serial port
+    // Returns after a char has been read or after timer expired (see VMIN and TIME)
+    read_bytes_cnt = read(fd, &currentByte, 1); 
+    log_debug("RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte, (char)currentByte, read_bytes_cnt);
+    
+    // State-machine processes the read byte 
+    sm_processInput(&st_machine, currentByte); 
 
+    // If the state machine reached it's stopping state process the frame
     if (st_machine.currentState == R_STATE_SU_STOP)
     {
       process_read_su_frame(fd, st_machine.frame);
@@ -268,61 +281,74 @@ int receiver_open(int fd)
 int write_data(int fd, uint8_t *buffer, int length)
 {
 
-  int res = 0;
-  int data_written = 0;
+  int data_bytes_written = 0;
+  int total_bytes_written = 0;
+  int nWritten = 0;
 
-  uint8_t frame[4];
-  frame[0] = FLAG;
-  frame[1] = ADDR_TRANSM_COMMAND;
-  frame[2] = connection_info.sequenceNumber ? 0x40 : 0x00;
-  frame[3] = frame[1] ^ frame[2];
+  // Build the data frame header
+  uint8_t frame[I_FRAME_HEADER_SIZE];
+  frame[FLAG_START_INDEX] = FLAG;
+  frame[ADDR_INDEX] = ADDR_TRANSM_COMMAND;
+  frame[CTRL_INDEX] = connection_info.sequenceNumber ? 0x40 : 0x00;
+  frame[BCC_INDEX] = frame[1] ^ frame[2];
+
+  // Write header to serial port
+  write(fd, frame, I_FRAME_HEADER_SIZE);
+
+  total_bytes_written += I_FRAME_HEADER_SIZE;
 
   uint8_t bcc2 = 0x00;
 
-  res += write(fd, frame, 4);
-
+  // Data writting to serial port (byte by byte)
   for (int i = 0; i < length; i++)
   {
 
+    // Update BCC2
     bcc2 ^= buffer[i];
 
     if (buffer[i] == FLAG || buffer[i] == ESC)
-    {
+    { 
+
+      // Handling byte stuffing
       frame[0] = ESC;
       frame[1] = buffer[i] ^ ESC_XOR;
-      int nWritten = write(fd, frame, 2);
-      res += nWritten;
+      nWritten = write(fd, frame, 2);
 
-      if(nWritten == 2)
-        data_written++;
-      else
-        data_written += nWritten;
+      data_bytes_written += (nWritten == 2) ? 1 : nWritten;
+      total_bytes_written += nWritten;
+
     }
     else
-    {
-      int nWritten = write(fd, &buffer[i], 1);
-      res += nWritten;
-      data_written += nWritten;
+    {  
+      nWritten = write(fd, &buffer[i], 1);
+      data_bytes_written += nWritten;
+      total_bytes_written += nWritten;
     }
   }
 
+  // Write the Data bcc
+
   if (bcc2 == FLAG || bcc2 == ESC)
-  {
+  { // Stuff the data bcc if necessary
     frame[0] = ESC;
     frame[1] = bcc2 ^ ESC_XOR;
-    res += write(fd, frame, 2);
+    nWritten = write(fd, frame, 2);
+    total_bytes_written += nWritten;
   }
   else
-  {
-    res += write(fd, &bcc2, 1);
+  { 
+    nWritten = write(fd, &bcc2, 1);
+    total_bytes_written += nWritten;
   }
 
+  // Write the final flag
   frame[0] = FLAG;
-  res += write(fd, frame, 1);
+  nWritten = write(fd, frame, 1);
+  total_bytes_written += nWritten;
 
-  log_debug("- Message sent to Receiver(%d bytes written - %d data bytes written) - header: 0x%x 0x%x 0x%x 0x%x \n", res,data_written,frame[0],frame[1],frame[2],frame[3]);
+  log_debug("- Message sent to Receiver(%d bytes written - %d data bytes written) - header: 0x%x 0x%x 0x%x 0x%x \n", total_bytes_written,data_bytes_written,frame[0],frame[1],frame[2],frame[3]);
 
-  return data_written;
+  return data_bytes_written;
 }
 
 int llwrite(int fd, uint8_t *buffer, int length)
@@ -335,34 +361,41 @@ int llread(int fd, uint8_t *buffer)
 
   int res;
 
+  // Initialize the received frame processing state-machine
   struct su_frame_rcv_state_machine st_machine;
   st_machine.currentState = R_STATE_START;
   st_machine.connectionEstablished = connection_info.connectionEstablished;
   st_machine.currentByte_idx = 0;
 
   log_debug("RECEIVER: started listening for data");
+
+  // Listen for data
   while (true)
-  { /* loop for input */
+  { 
 
     uint8_t currentByte;
-    res = read(fd, &currentByte, 1); /* returns after a char has been read or after timer expired */
+
+    // Read a byte from the serial port
+    // Returns after a char has been read or after timer expired (see VMIN and TIME)
+    res = read(fd, &currentByte, 1); 
 
     log_debug("RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte, (char)currentByte, res);
-    sm_processInput(&st_machine, currentByte); /* state-machine processes the read byte */
+    
+    // Process the read byte 
+    sm_processInput(&st_machine, currentByte); 
 
     if (st_machine.currentState == R_STATE_SU_STOP)
-    {
+    { // SU frame reading stop-state reached
+
       if (process_read_su_frame(fd, st_machine.frame) == CONTROL_DISC)
         return 0;
     }
     else if (st_machine.currentState == R_STATE_I_STOP)
-    {
+    { // Data frame reading stop-state reached
 
       int nRead = process_read_i_frame(fd, st_machine.frame, st_machine.currentByte_idx, buffer);
 
-      if (nRead < 0)
-        continue;
-      else
+      if(nRead >= 0)
         return nRead;
     }
   }
@@ -372,16 +405,16 @@ int llread(int fd, uint8_t *buffer)
 
 void build_su_frame(uint8_t *buf, int address, int control)
 {
-  buf[0] = FLAG;
-  buf[1] = address;
-  buf[2] = control;
-  buf[3] = address ^ control;
-  buf[4] = FLAG;
+  buf[FLAG_START_INDEX] = FLAG;
+  buf[ADDR_INDEX] = address;
+  buf[CTRL_INDEX] = control;
+  buf[BCC_INDEX] = address ^ control;
+  buf[FLAG_START_INDEX] = FLAG;
 }
 
 int llclose(int fd)
 {
-  printf("\n\n-CLOSING CONNECTION...\n\n");
+  log_debug("\n\n-CLOSING CONNECTION...\n");
 
   switch (connection_info.role)
   {
@@ -397,6 +430,7 @@ int llclose(int fd)
 
   sleep(1);
 
+  // Rollback serial port configuration
   if (tcsetattr(fd, TCSANOW, &oldtio) == -1)
   {
     perror("tcsetattr");

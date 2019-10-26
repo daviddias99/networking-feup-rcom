@@ -8,8 +8,9 @@
 #define FLAG_END_INDEX             4
 
 #define SU_FRAME_SIZE              5
+#define I_FRAME_HEADER_SIZE       4
 #define I_FRAME_SIZE               255
-#define PORT_PATH_LENGTH 11
+#define PORT_PATH_LENGTH           11
 
 // Frame of type S or U Header Slot Values
 #define FLAG                  0x7e  //
@@ -36,3 +37,4 @@
 #define DATA 0
 #define CLOSE 1
 #define OPEN 2
+#define LOG_FILE            "ll_log.txt"
