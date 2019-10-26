@@ -269,7 +269,6 @@ int write_data(int fd, uint8_t *buffer, int length)
 {
 
   int res = 0;
-  int extra_bytes = 0;
 
   uint8_t frame[4];
   frame[0] = FLAG;
@@ -280,7 +279,6 @@ int write_data(int fd, uint8_t *buffer, int length)
   uint8_t bcc2 = 0x00;
 
   res += write(fd, frame, 4);
-  extra_bytes += 4;
 
   for (int i = 0; i < length; i++)
   {
@@ -292,7 +290,6 @@ int write_data(int fd, uint8_t *buffer, int length)
       frame[0] = ESC;
       frame[1] = buffer[i] ^ ESC_XOR;
       res += write(fd, frame, 2);
-      extra_bytes += 1;
     }
     else
     {
@@ -305,7 +302,6 @@ int write_data(int fd, uint8_t *buffer, int length)
     frame[0] = ESC;
     frame[1] = bcc2 ^ ESC_XOR;
     res += write(fd, frame, 2);
-    extra_bytes += 1;
   }
   else
   {
@@ -314,17 +310,16 @@ int write_data(int fd, uint8_t *buffer, int length)
 
   frame[0] = FLAG;
   res += write(fd, frame, 1);
-  extra_bytes+=1;
 
-  log_debug("- Message sent to Receiver(%d bytes written, %d data bytes sent) - header: 0x%x 0x%x 0x%x 0x%x \n", res,res - extra_bytes,frame[0],frame[1],frame[2],frame[3]);
+  log_debug("- Message sent to Receiver(%d bytes written) - header: 0x%x 0x%x 0x%x 0x%x \n", res,frame[0],frame[1],frame[2],frame[3]);
 
-  return res - extra_bytes;
+  return res;
 }
 
 int llwrite(int fd, uint8_t *buffer, int length)
 {
-  
-  return  write_frame(fd, DATA, buffer, length);
+  write_frame(fd, DATA, buffer, length);
+  return length;
 }
 
 int llread(int fd, uint8_t *buffer)
@@ -487,7 +482,7 @@ int write_frame(int fd, int type, char *buffer, size_t length)
     }
   }
 
-  return 0;
+  return res;
 }
 
 int receiver_close(int fd)
