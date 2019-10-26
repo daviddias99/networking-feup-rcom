@@ -311,7 +311,7 @@ int write_data(int fd, uint8_t *buffer, int length)
   frame[0] = FLAG;
   res += write(fd, frame, 1);
 
-  log_debug("- Message sent to Receiver(%d bytes written)\n", res);
+  log_debug("- Message sent to Receiver(%d bytes written) - header: 0x%x 0x%x 0x%x 0x%x \n", res,frame[0],frame[1],frame[2],frame[3]);
 
   return res;
 }
@@ -416,6 +416,8 @@ int write_frame(int fd, int type, char *buffer, size_t length)
   numTries = 1;
   timedOut = 1;
 
+  int nextSequenceNumber = (connection_info.sequenceNumber + 1) % 2;
+
   while (numTries < 4)
   {
 
@@ -444,12 +446,18 @@ int write_frame(int fd, int type, char *buffer, size_t length)
       {
         if (type == DATA)
         {
-          if (st_machine.frame[2] == ((connection_info.sequenceNumber + 1) << 7) | CONTROL_RR_BASE)
+          
+          if (st_machine.frame[2] == ((nextSequenceNumber << 7) | CONTROL_RR_BASE))
           {
             alarm(0);
 
-            connection_info.sequenceNumber = (connection_info.sequenceNumber + 1) % 2;
+            connection_info.sequenceNumber = nextSequenceNumber;
             return n_written;
+          }
+          else if(st_machine.frame[2] == ((connection_info.sequenceNumber << 7) | CONTROL_REJ_BASE))
+          {
+            numTries --;
+            break;
           }
         }
         else if (type == OPEN)
