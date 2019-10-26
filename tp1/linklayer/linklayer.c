@@ -269,6 +269,7 @@ int write_data(int fd, uint8_t *buffer, int length)
 {
 
   int res = 0;
+  int data_written = 0;
 
   uint8_t frame[4];
   frame[0] = FLAG;
@@ -289,11 +290,19 @@ int write_data(int fd, uint8_t *buffer, int length)
     {
       frame[0] = ESC;
       frame[1] = buffer[i] ^ ESC_XOR;
-      res += write(fd, frame, 2);
+      int nWritten = write(fd, frame, 2);
+      res += nWritten;
+
+      if(nWritten == 2)
+        data_written++;
+      else
+        data_written += nWritten;
     }
     else
     {
-      res += write(fd, &buffer[i], 1);
+      int nWritten = write(fd, &buffer[i], 1);
+      res += nWritten;
+      data_written += nWritten;
     }
   }
 
@@ -311,15 +320,14 @@ int write_data(int fd, uint8_t *buffer, int length)
   frame[0] = FLAG;
   res += write(fd, frame, 1);
 
-  log_debug("- Message sent to Receiver(%d bytes written) - header: 0x%x 0x%x 0x%x 0x%x \n", res,frame[0],frame[1],frame[2],frame[3]);
+  log_debug("- Message sent to Receiver(%d bytes written - %d data bytes written) - header: 0x%x 0x%x 0x%x 0x%x \n", res,data_written,frame[0],frame[1],frame[2],frame[3]);
 
-  return res;
+  return data_written;
 }
 
 int llwrite(int fd, uint8_t *buffer, int length)
 {
-  write_frame(fd, DATA, buffer, length);
-  return length;
+  return write_frame(fd, DATA, buffer, length);
 }
 
 int llread(int fd, uint8_t *buffer)
@@ -450,12 +458,13 @@ int write_frame(int fd, int type, char *buffer, size_t length)
           if (st_machine.frame[2] == ((nextSequenceNumber << 7) | CONTROL_RR_BASE))
           {
             alarm(0);
-
+            log_debug("TRANSMITTER: ACK(%d) received",nextSequenceNumber);
             connection_info.sequenceNumber = nextSequenceNumber;
             return n_written;
           }
-          else if(st_machine.frame[2] == ((nextSequenceNumber << 7) | CONTROL_REJ_BASE))
+          else if(st_machine.frame[2] == ((connection_info.sequenceNumber << 7) | CONTROL_REJ_BASE))
           {
+            log_debug("TRANSMITTER: NACK(%d) received",connection_info.sequenceNumber);
             numTries --;
             break;
           }
@@ -482,7 +491,7 @@ int write_frame(int fd, int type, char *buffer, size_t length)
     }
   }
 
-  return res;
+  return -1;
 }
 
 int receiver_close(int fd)

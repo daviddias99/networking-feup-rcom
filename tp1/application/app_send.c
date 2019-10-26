@@ -70,7 +70,9 @@ int send_file(char* file_path) {
         printf("\nCONTROL PACKET SIZE SEND: %d\n\n", control_packet_size);
         nWritten = llwrite(serial_port_fd, control_packet,control_packet_size);
         log_debug("APP_T: Writting control packet(START) to serial port (%d bytes written)",nWritten);
-
+        
+        if(nWritten == -1)
+            continue;
     } while(nWritten != control_packet_size);
 
 
