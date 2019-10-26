@@ -30,6 +30,8 @@ linklayer_info connection_info;
 static struct termios oldtio;
 int timedOut = 1, numTries = 1;
 
+FILE* log_file;
+
 int sequence_number = 0;
 
 static void alarm_handler(int signo)
@@ -151,6 +153,11 @@ int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, char *buffe
 
 int llopen(int port, int role)
 {
+
+  log_file = fopen("ll_log.txt","w");
+
+  log_set(log_file);
+  log_set_quiet(1);
 
   struct sigaction alarm_action;
   memset(&alarm_action, 0, sizeof alarm_action);
