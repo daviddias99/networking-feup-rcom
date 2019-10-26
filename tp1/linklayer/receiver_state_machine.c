@@ -5,8 +5,6 @@
 void sm_start_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
 {
 
-  
-
   if (receivedByte == FLAG)
   {
     st_machine->currentState = R_STATE_FLAG_RCV;
@@ -118,6 +116,7 @@ void sm_i_c_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_
 
 void sm_i_data_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
 {
+  // TODO: Change this limit
   if(st_machine->currentByte_idx == I_FRAME_SIZE){
 
     st_machine->currentState = R_STATE_START;
