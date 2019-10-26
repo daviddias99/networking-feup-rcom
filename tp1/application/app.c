@@ -22,10 +22,6 @@ int get_file_path_from_user(char* path){
 
 int main(int argc, char const *argv[]) {
 
-    int fd = open("log.txt", O_CREAT | O_WRONLY);
-    dup2(fd, STDOUT_FILENO);
-
-
     if (argc != 2) {
       printf("Usage:\tserial_transfer Role\n\tex: serial_transfer receiver\n");
       exit(1);
