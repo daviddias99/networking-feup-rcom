@@ -482,7 +482,7 @@ int write_frame(int fd, int type, char *buffer, size_t length)
     }
   }
 
-  return -1;
+  return 0;
 }
 
 int receiver_close(int fd)
