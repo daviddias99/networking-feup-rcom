@@ -156,7 +156,7 @@ int llopen(int port, int role)
 
   log_file = fopen("ll_log.txt","w");
 
-  log_set(log_file);
+  log_set_fp(log_file);
   log_set_quiet(1);
 
   struct sigaction alarm_action;
