@@ -318,8 +318,8 @@ int write_data(int fd, uint8_t *buffer, int length)
 
 int llwrite(int fd, uint8_t *buffer, int length)
 {
-  write_frame(fd, DATA, buffer, length);
-  return length;
+ 
+  return  write_frame(fd, DATA, buffer, length);;
 }
 
 int llread(int fd, uint8_t *buffer)
@@ -482,7 +482,7 @@ int write_frame(int fd, int type, char *buffer, size_t length)
     }
   }
 
-  return res;
+  return -1;
 }
 
 int receiver_close(int fd)
