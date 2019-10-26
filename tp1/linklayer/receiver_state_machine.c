@@ -118,6 +118,12 @@ void sm_i_c_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_
 
 void sm_i_data_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
 {
+  if(st_machine->currentByte_idx == I_FRAME_SIZE){
+
+    st_machine->currentState = R_STATE_START;
+    log_debug("STM: At Data RCV state --> At start state (data size exceed limits)");
+    return;
+  }
 
   if (receivedByte == 0x7d)
   { // escape character must be converted to original chararacter
