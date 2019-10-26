@@ -409,7 +409,7 @@ void build_su_frame(uint8_t *buf, int address, int control)
   buf[ADDR_INDEX] = address;
   buf[CTRL_INDEX] = control;
   buf[BCC_INDEX] = address ^ control;
-  buf[FLAG_START_INDEX] = FLAG;
+  buf[FLAG_END_INDEX] = FLAG;
 }
 
 int llclose(int fd)
