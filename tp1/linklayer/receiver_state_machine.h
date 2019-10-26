@@ -22,13 +22,13 @@ typedef enum receiver_state {
 } receiver_state_t;
 
 // State-machine representing the receiving of type S or U
-struct su_frame_rcv_state_machine {
+struct receiver_state_machine {
   receiver_state_t currentState;
   uint8_t frame[I_FRAME_SIZE];
   int currentByte_idx;
   bool connectionEstablished;
 };
 
-void sm_processInput(struct su_frame_rcv_state_machine *st_machine, uint8_t received_byte);
+void sm_processInput(struct receiver_state_machine *st_machine, uint8_t received_byte);
 
 #endif

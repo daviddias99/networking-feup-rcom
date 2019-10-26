@@ -38,3 +38,5 @@
 #define CLOSE 1
 #define OPEN 2
 #define LOG_FILE            "ll_log.txt"
+
+#define MAX_TIMEOUT_RETRY_CNT       3
