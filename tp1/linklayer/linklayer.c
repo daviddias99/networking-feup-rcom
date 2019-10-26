@@ -454,7 +454,7 @@ int write_frame(int fd, int type, char *buffer, size_t length)
             connection_info.sequenceNumber = nextSequenceNumber;
             return n_written;
           }
-          else if(st_machine.frame[2] == ((connection_info.sequenceNumber << 7) | CONTROL_REJ_BASE))
+          else if(st_machine.frame[2] == ((nextSequenceNumber << 7) | CONTROL_REJ_BASE))
           {
             numTries --;
             break;
