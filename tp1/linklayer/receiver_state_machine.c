@@ -2,7 +2,7 @@
 
 
 
-void sm_start_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
+void sm_start_st_handler(struct receiver_state_machine *st_machine, uint8_t receivedByte)
 {
 
   if (receivedByte == FLAG)
@@ -18,7 +18,7 @@ void sm_start_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t 
   return;
 }
 
-void sm_flag_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
+void sm_flag_st_handler(struct receiver_state_machine *st_machine, uint8_t receivedByte)
 {
 
   if (receivedByte == ADDR_TRANSM_COMMAND || receivedByte == ADDR_TRANSM_RES)
@@ -40,7 +40,7 @@ void sm_flag_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t r
   return;
 }
 
-void sm_a_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
+void sm_a_rcv_st_handler(struct receiver_state_machine *st_machine, uint8_t receivedByte)
 { 
   // log_debug("\nat control, connection established %s\b", st_machine->connectionEstablished ? "TRUE" : "FALSE");
 
@@ -73,7 +73,7 @@ void sm_a_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t 
   return;
 }
 
-void sm_su_c_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
+void sm_su_c_rcv_st_handler(struct receiver_state_machine *st_machine, uint8_t receivedByte)
 {
 
   log_debug("STM: At SU C RCV state");
@@ -90,7 +90,7 @@ void sm_su_c_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8
   return;
 }
 
-void sm_i_c_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
+void sm_i_c_rcv_st_handler(struct receiver_state_machine *st_machine, uint8_t receivedByte)
 {
 
   if (receivedByte == (st_machine->frame[CTRL_INDEX] ^ st_machine->frame[ADDR_INDEX]))
@@ -114,7 +114,7 @@ void sm_i_c_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_
   return;
 }
 
-void sm_i_data_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
+void sm_i_data_rcv_st_handler(struct receiver_state_machine *st_machine, uint8_t receivedByte)
 {
   // TODO: Change this limit
   if(st_machine->currentByte_idx == I_FRAME_SIZE){
@@ -155,7 +155,7 @@ void sm_i_data_rcv_st_handler(struct su_frame_rcv_state_machine *st_machine, uin
   return;
 }
 
-void sm_esc_found_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
+void sm_esc_found_st_handler(struct receiver_state_machine *st_machine, uint8_t receivedByte)
 {
 
 
@@ -184,7 +184,7 @@ void sm_esc_found_st_handler(struct su_frame_rcv_state_machine *st_machine, uint
   return;
 }
 
-void sm_su_bcc1_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
+void sm_su_bcc1_st_handler(struct receiver_state_machine *st_machine, uint8_t receivedByte)
 {
 
   
@@ -204,7 +204,7 @@ void sm_su_bcc1_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_
   return;
 }
 
-void sm_su_state_stop_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
+void sm_su_state_stop_st_handler(struct receiver_state_machine *st_machine, uint8_t receivedByte)
 {
 
 
@@ -224,7 +224,7 @@ void sm_su_state_stop_st_handler(struct su_frame_rcv_state_machine *st_machine, 
   return;
 }
 
-void sm_i_state_stop_st_handler(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
+void sm_i_state_stop_st_handler(struct receiver_state_machine *st_machine, uint8_t receivedByte)
 {
 
   
@@ -245,7 +245,7 @@ void sm_i_state_stop_st_handler(struct su_frame_rcv_state_machine *st_machine, u
   return;
 }
 
-static void (*rcv_event_handlers[])(struct su_frame_rcv_state_machine *, uint8_t) = {
+static void (*rcv_event_handlers[])(struct receiver_state_machine *, uint8_t) = {
                                                               sm_start_st_handler,
                                                               sm_flag_st_handler,
                                                               sm_a_rcv_st_handler,
@@ -257,7 +257,7 @@ static void (*rcv_event_handlers[])(struct su_frame_rcv_state_machine *, uint8_t
                                                               sm_su_state_stop_st_handler,
                                                               sm_i_state_stop_st_handler};
 
-void sm_processInput(struct su_frame_rcv_state_machine *st_machine, uint8_t receivedByte)
+void sm_processInput(struct receiver_state_machine *st_machine, uint8_t receivedByte)
 {
    (*rcv_event_handlers[st_machine->currentState])(st_machine,receivedByte);
 
