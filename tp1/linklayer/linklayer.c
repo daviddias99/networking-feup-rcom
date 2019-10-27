@@ -3,13 +3,21 @@
 #include "receiver_state_machine.h"
 #include "transmitter_state_machine.h"
 
+static int serial_port_setup(int port);
+
 static int transmitter_open(int fd);
 static int receiver_open(int fd);
-static int serial_port_setup(int port);
-static void build_su_frame(uint8_t *buf, int address, int control);
 static int transmitter_close(int fd);
 static int receiver_close(int fd);
 static int write_frame(int fd, int type, char *buffer, size_t length);
+static int write_data(int fd, uint8_t *buffer, int length);
+static int sendUA(int fd);
+static int sendAck(int fd,bool type, int sequence_no);
+static bool valid_data_bcc(uint8_t frame[], size_t frame_size);
+static void build_su_frame(uint8_t *buf, int address, int control);
+static int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, char *buffer);
+static int process_read_su_frame(int fd, uint8_t frame[]);
+static void alarm_handler(int signo);
 
 typedef struct linklayer
 {
@@ -289,7 +297,7 @@ int write_data(int fd, uint8_t *buffer, int length)
   frame[FLAG_START_INDEX] = FLAG;
   frame[ADDR_INDEX] = ADDR_TRANSM_COMMAND;
   frame[CTRL_INDEX] = connection_info.sequenceNumber ? 0x40 : 0x00;
-  frame[BCC_INDEX] = frame[1] ^ frame[2];
+  frame[BCC1_INDEX] = frame[1] ^ frame[2];
 
   // Write header to serial port
   write(fd, frame, I_FRAME_HEADER_SIZE);
@@ -406,7 +414,7 @@ void build_su_frame(uint8_t *buf, int address, int control)
   buf[FLAG_START_INDEX] = FLAG;
   buf[ADDR_INDEX] = address;
   buf[CTRL_INDEX] = control;
-  buf[BCC_INDEX] = address ^ control;
+  buf[BCC1_INDEX] = address ^ control;
   buf[FLAG_END_INDEX] = FLAG;
 }
 

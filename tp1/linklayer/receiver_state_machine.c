@@ -80,7 +80,7 @@ void sm_su_c_rcv_st_handler(struct receiver_state_machine *st_machine, uint8_t r
   if (receivedByte == (st_machine->frame[CTRL_INDEX] ^ st_machine->frame[ADDR_INDEX]))
   {
     st_machine->currentState = R_STATE_SU_BCC1_OK;
-    st_machine->frame[BCC_INDEX] = receivedByte;
+    st_machine->frame[BCC1_INDEX] = receivedByte;
   }
   else if (receivedByte == FLAG)
     st_machine->currentState = R_STATE_FLAG_RCV;
@@ -96,7 +96,7 @@ void sm_i_c_rcv_st_handler(struct receiver_state_machine *st_machine, uint8_t re
   if (receivedByte == (st_machine->frame[CTRL_INDEX] ^ st_machine->frame[ADDR_INDEX]))
   { // check the first BCC
     st_machine->currentState = R_STATE_I_DATA_RCV;
-    st_machine->frame[BCC_INDEX] = receivedByte;
+    st_machine->frame[BCC1_INDEX] = receivedByte;
     st_machine->currentByte_idx = I_FRAME_DATA_START_INDEX;
     log_debug("STM: At I C RCV state --> At Data RCV state (correct header bcc)");
   }

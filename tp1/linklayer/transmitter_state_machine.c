@@ -62,7 +62,7 @@ void tsm_process_input(struct transmitter_state_machine* st_machine, uint8_t rec
         if(received_byte == (st_machine->frame[CTRL_INDEX] ^ st_machine->frame[ADDR_INDEX])){
           log_debug("STM: At C state --> At BCC state");
           st_machine->currentState = T_STATE_BCC_OK;
-          st_machine->frame[BCC_INDEX] = received_byte;
+          st_machine->frame[BCC1_INDEX] = received_byte;
         }
         else if(received_byte == FLAG) {
           st_machine->currentState = T_STATE_FLAG_RCV;
