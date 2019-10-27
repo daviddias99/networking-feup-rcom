@@ -90,7 +90,7 @@ int send_file(char* file_path) {
             break;
         }
 
-        log_data_packet((char*) data_packet);
+        log_data_packet( data_packet);
         printf("\n");
 
         // send the packet through the serial port

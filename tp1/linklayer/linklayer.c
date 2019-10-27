@@ -9,13 +9,13 @@ static int transmitter_open(int fd);
 static int receiver_open(int fd);
 static int transmitter_close(int fd);
 static int receiver_close(int fd);
-static int write_frame(int fd, int type, char *buffer, size_t length);
+static int write_frame(int fd, int type, uint8_t *buffer, size_t length);
 static int write_data(int fd, uint8_t *buffer, int length);
 static int sendUA(int fd);
 static int sendAck(int fd,bool type, int sequence_no);
 static bool valid_data_bcc(uint8_t frame[], size_t frame_size);
 static void build_su_frame(uint8_t *buf, int address, int control);
-static int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, char *buffer);
+static int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, uint8_t *buffer);
 static int process_read_su_frame(int fd, uint8_t frame[]);
 static void alarm_handler(int signo);
 
@@ -111,9 +111,11 @@ int process_read_su_frame(int fd, uint8_t frame[])
 
     return CONTROL_UA;
   }
+
+  return 0;
 }
 
-int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, char *buffer)
+int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, uint8_t *buffer)
 {
 
   const int I_FRAME_DATA_END_INDEX = frame_size - 3;
@@ -465,7 +467,7 @@ int transmitter_close(int fd)
   return write_frame(fd, CLOSE, frame, 0);
 }
 
-int write_frame(int fd, int type, char *buffer, size_t length)
+int write_frame(int fd, int type, uint8_t *buffer, size_t length)
 {
   int n_written, res;
   struct transmitter_state_machine st_machine;

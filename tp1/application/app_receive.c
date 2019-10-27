@@ -78,6 +78,8 @@ int receive_file(int port) {
 
     //close(file_fd);
     llclose(port_fd);
+
+    return 0;
 }
 
 control_info* create_control_info(uint8_t* packet, const size_t packet_size) {
@@ -110,7 +112,7 @@ control_info* create_control_info(uint8_t* packet, const size_t packet_size) {
             }
             case FILE_NAME:
             {
-                info->file_name = strndup(packet + packet_index, length);
+                info->file_name = strndup((char*)packet + packet_index, length);
                 printf("file name : %s\n", info->file_name);
                 if (info->file_name == NULL) {
                     printf("Error allocating memory for file name\n");

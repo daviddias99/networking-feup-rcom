@@ -87,7 +87,7 @@ void log_data_packet(uint8_t* packet) {
     printf("sequence number : %d\n", packet[1]);
 
     size_t length = 256 * packet[2] + packet[3];
-    printf("size : 256 * %d + %d = %d\n", packet[2], packet[3], length);
+    printf("size : 256 * %d + %d = %ld\n", packet[2], packet[3], length);
 
     printf("data :");
     for (size_t i = 0; i < length; i++)
