@@ -4,6 +4,11 @@
 #include "./app.h"
 #include "./tlv.h"
 
+static FILE* log_fp = NULL;
+
+void app_rcv_set_log_fp(FILE* fp){
+  log_fp = fp;
+}
 
 int receive_file(int port) {
 

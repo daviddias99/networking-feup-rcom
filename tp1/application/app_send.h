@@ -26,4 +26,6 @@ uint8_t* build_data_packet(uint8_t* data, uint8_t data_size);
 
 char* name_from_path(char* path);
 
+void app_snd_set_log_fp(FILE* fp);
+
 #endif

@@ -2,11 +2,17 @@
 
 // FIXME: review code and use const in the defined functions
 
+static FILE* log_fp = NULL;
+
+void app_snd_set_log_fp(FILE* fp){
+  log_fp = fp;
+}
+
 int send_file(char* file_path) {
 
-    log_debug("APP_T: Start file(%s) sending to receiver procedure", file_path);
+    log_debug(log_fp,"APP_T: Start file(%s) sending to receiver procedure", file_path);
 
-    log_debug("APP_T: Opening the file...");
+    log_debug(log_fp,"APP_T: Opening the file...");
 
     // open the file to send
     int file_fd = open(file_path, O_RDONLY);
@@ -15,7 +21,7 @@ int send_file(char* file_path) {
         exit(1);
     }
 
-    log_debug("APP_T: Retreiving file information...");
+    log_debug(log_fp,"APP_T: Retreiving file information...");
 
     // retreive file information
     struct stat file_st;
@@ -31,9 +37,9 @@ int send_file(char* file_path) {
     tlv_list[0] = create_tlv_int(FILE_SIZE, file_st.st_size);
     tlv_list[1] = create_tlv_str(FILE_NAME, name_from_path(file_path));
 
-    log_debug("APP_T: Creating control packet tlv segments...");
-    log_debug("APP_T: TLV[0] -type:%d -length:%d -value:%d ",tlv_list[0]->type,tlv_list[0]->length,*(int*)tlv_list[0]->value);
-    log_debug("APP_T: TLV[1] -type:%d -length:%d -value:%s ",tlv_list[0]->type,tlv_list[0]->length,(char*)tlv_list[1]->value);
+    log_debug(log_fp,"APP_T: Creating control packet tlv segments...");
+    log_debug(log_fp,"APP_T: TLV[0] -type:%d -length:%d -value:%d ",tlv_list[0]->type,tlv_list[0]->length,*(int*)tlv_list[0]->value);
+    log_debug(log_fp,"APP_T: TLV[1] -type:%d -length:%d -value:%s ",tlv_list[0]->type,tlv_list[0]->length,(char*)tlv_list[1]->value);
 
     // build the control packet
 
@@ -44,7 +50,7 @@ int send_file(char* file_path) {
         return -1;
     }
 
-    log_debug("APP_T: Building control packet(%d bytes)",control_packet_size);
+    log_debug(log_fp,"APP_T: Building control packet(%d bytes)",control_packet_size);
 
     char* file_data[MAX_PACKET_DATA];
     uint8_t bytes_read;
@@ -53,12 +59,12 @@ int send_file(char* file_path) {
 
     // open the serial port
 
-    log_debug("APP_T: attempting to open serial port...");
+    log_debug(log_fp,"APP_T: attempting to open serial port...");
     serial_port_fd = llopen(0,TRANSMITTER);
 
     while(serial_port_fd < 0){
         sleep(1);
-        log_debug("APP_T: attempting to open serial port...");
+        log_debug(log_fp,"APP_T: attempting to open serial port...");
         serial_port_fd = llopen(0,TRANSMITTER);  
     }
 
@@ -69,7 +75,7 @@ int send_file(char* file_path) {
     do {
         printf("\nCONTROL PACKET SIZE SEND: %d\n\n", control_packet_size);
         nWritten = llwrite(serial_port_fd, control_packet,control_packet_size);
-        log_debug("APP_T: Writting control packet(START) to serial port (%d bytes written)",nWritten);
+        log_debug(log_fp,"APP_T: Writting control packet(START) to serial port (%d bytes written)",nWritten);
         
         if(nWritten == -1)
             continue;
@@ -91,7 +97,7 @@ int send_file(char* file_path) {
 
         do{
             nWritten = llwrite(serial_port_fd, data_packet, bytes_read + 4);
-            log_debug("APP_T: Writting data packet to serial port (%d bytes written)",nWritten);
+            log_debug(log_fp,"APP_T: Writting data packet to serial port (%d bytes written)",nWritten);
 
         } while (nWritten != bytes_read + 4);
         free(data_packet);
@@ -109,7 +115,7 @@ int send_file(char* file_path) {
     do{
 
         nWritten = llwrite(serial_port_fd,control_packet,control_packet_size);
-        log_debug("APP_T: Writting control packet(END) to serial port (%d bytes written)",nWritten);
+        log_debug(log_fp,"APP_T: Writting control packet(END) to serial port (%d bytes written)",nWritten);
 
     }while(nWritten != control_packet_size);
 
@@ -120,7 +126,7 @@ int send_file(char* file_path) {
 
     // close the connection
 
-    log_debug("APP_T: Closing the connection with the receiver..." );
+    log_debug(log_fp,"APP_T: Closing the connection with the receiver..." );
     llclose(serial_port_fd);
     free(control_packet);
     close(file_fd);

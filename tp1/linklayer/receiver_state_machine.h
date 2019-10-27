@@ -30,5 +30,6 @@ struct receiver_state_machine {
 };
 
 void sm_processInput(struct receiver_state_machine *st_machine, uint8_t received_byte);
+void rcv_stm_set_log_fp(FILE* fp);
 
 #endif

@@ -19,6 +19,8 @@ static int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, char
 static int process_read_su_frame(int fd, uint8_t frame[]);
 static void alarm_handler(int signo);
 
+static void init_logging();
+
 typedef struct linklayer
 {
 
@@ -34,7 +36,7 @@ linklayer_info connection_info;
 
 static struct termios oldtio; // Starting serial port settings (set after successful serial_port_setup)
 int timedOut = 1, numTries = 1;
-FILE *log_file;
+static FILE *log_fp = NULL;
 
 static void alarm_handler(int signo)
 {
@@ -50,7 +52,7 @@ int sendUA(int fd)
   build_su_frame(response, ADDR_RECEIV_RES, CONTROL_UA);
 
   int res = write(fd, response, SU_FRAME_SIZE);
-  log_debug("RECEIVER: UA sent to transmitter(%x %x %x %x %x) (%d bytes written)\n", response[0], response[1], response[2], response[3], response[4], res);
+  log_debug(log_fp,"RECEIVER: UA sent to transmitter(%x %x %x %x %x) (%d bytes written)\n", response[0], response[1], response[2], response[3], response[4], res);
 
   return 0;
 }
@@ -66,9 +68,9 @@ int sendAck(int fd, bool type, int sequence_no)
   int res = write(fd, response, SU_FRAME_SIZE);
 
   if (type)
-    log_debug("RECEIVER: ACK(%d) sent to transmitter(%x %x %x %x %x) (%d bytes written)\n", sequence_no, response[0], response[1], response[2], response[3], response[4], res);
+    log_debug(log_fp,"RECEIVER: ACK(%d) sent to transmitter(%x %x %x %x %x) (%d bytes written)\n", sequence_no, response[0], response[1], response[2], response[3], response[4], res);
   else
-    log_debug("RECEIVER: NACK(%d) sent to transmitter(%x %x %x %x %x) (%d bytes written)\n", sequence_no, response[0], response[1], response[2], response[3], response[4], res);
+    log_debug(log_fp,"RECEIVER: NACK(%d) sent to transmitter(%x %x %x %x %x) (%d bytes written)\n", sequence_no, response[0], response[1], response[2], response[3], response[4], res);
 
   return 0;
 }
@@ -120,10 +122,10 @@ int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, char *buffe
   if (isDataBCCValid)
   { // If the data bcc is valid check for the sequence number
 
-    log_debug("RECEIVER: Data BCC is valid");
+    log_debug(log_fp,"RECEIVER: Data BCC is valid");
     int packetSeqNumber = frame[CTRL_INDEX] >> 6; // The sequence number is bit #6 of the control byte
 
-    log_debug("RECEIVER: Received frame with seq=%d, desired was seq=%d", packetSeqNumber, connection_info.sequenceNumber);
+    log_debug(log_fp,"RECEIVER: Received frame with seq=%d, desired was seq=%d", packetSeqNumber, connection_info.sequenceNumber);
     if (packetSeqNumber == connection_info.sequenceNumber)
     { // Correct sequence number, send ack with next seq number
 
@@ -143,25 +145,30 @@ int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, char *buffe
     }
     else
     { // Duplicate frame, discard and send ack
-      log_debug("RECEIVER: duplicate frame received");
+      log_debug(log_fp,"RECEIVER: duplicate frame received");
       sendAck(fd, true, connection_info.sequenceNumber);
     }
   }
   else
   { // If the data bcc is invalid send nack asking for the same frame
-    log_debug("RECEIVER: Data BCC is invalid");
+    log_debug(log_fp,"RECEIVER: Data BCC is invalid");
     sendAck(fd, false, connection_info.sequenceNumber);
   }
 
   return -1;
 }
 
+void init_logging(){
+
+  log_fp = fopen(LOG_FILE,"w");
+  tsm_stm_set_log_fp(log_fp);
+  rcv_stm_set_log_fp(log_fp);
+}
+
 int llopen(int port, int role)
 {
 
-  log_file = fopen(LOG_FILE, "w"); // Setup logging file
-  log_set_fp(log_file);            // Make logging output to file
-  log_set_quiet(1);                // Stop logging from showing in stdout
+  init_logging();
 
   // Setup timeout alarm
   struct sigaction alarm_action;
@@ -225,14 +232,14 @@ int serial_port_setup(int port)
     return -1;
   }
 
-  log_debug("Serial port configuration set (port_path:%s)", port_path);
+  log_debug(log_fp,"Serial port configuration set (port_path:%s)", port_path);
 
   return fd;
 }
 
 int transmitter_open(int fd)
 {
-  log_debug("TRANSMITTER: Establishing connection...");
+  log_debug(log_fp,"TRANSMITTER: Establishing connection...");
 
   // Frame building
   uint8_t frame[SU_FRAME_SIZE];
@@ -269,7 +276,7 @@ int receiver_open(int fd)
     // Read a byte from the serial port
     // Returns after a char has been read or after timer expired (see VMIN and TIME)
     read_bytes_cnt = read(fd, &currentByte, 1);
-    log_debug("RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte, (char)currentByte, read_bytes_cnt);
+    log_debug(log_fp,"RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte, (char)currentByte, read_bytes_cnt);
 
     // State-machine processes the read byte
     sm_processInput(&st_machine, currentByte);
@@ -352,7 +359,7 @@ int write_data(int fd, uint8_t *buffer, int length)
   nWritten = write(fd, frame, 1);
   total_bytes_written += nWritten;
 
-  log_debug("TRANSMITTER: Data frame sent to Receiver(%d bytes written - %d data bytes written) - header: 0x%x 0x%x 0x%x 0x%x \n", total_bytes_written, data_bytes_written, frame[0], frame[1], frame[2], frame[3]);
+  log_debug(log_fp,"TRANSMITTER: Data frame sent to Receiver(%d bytes written - %d data bytes written) - header: 0x%x 0x%x 0x%x 0x%x \n", total_bytes_written, data_bytes_written, frame[0], frame[1], frame[2], frame[3]);
 
   return data_bytes_written;
 }
@@ -373,7 +380,7 @@ int llread(int fd, uint8_t *buffer)
   st_machine.connectionEstablished = connection_info.connectionEstablished;
   st_machine.currentByte_idx = 0;
 
-  log_debug("RECEIVER: started listening for data");
+  log_debug(log_fp,"RECEIVER: started listening for data");
 
   // Listen for data
   while (true)
@@ -385,7 +392,7 @@ int llread(int fd, uint8_t *buffer)
     // Returns after a char has been read or after timer expired (see VMIN and TIME)
     res = read(fd, &currentByte, 1);
 
-    log_debug("RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte, (char)currentByte, res);
+    log_debug(log_fp,"RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte, (char)currentByte, res);
 
     // Process the read byte
     sm_processInput(&st_machine, currentByte);
@@ -420,7 +427,7 @@ void build_su_frame(uint8_t *buf, int address, int control)
 
 int llclose(int fd)
 {
-  log_debug("\n\n-CLOSING CONNECTION...\n");
+  log_debug(log_fp,"\n\n-CLOSING CONNECTION...\n");
 
   switch (connection_info.role)
   {
@@ -483,7 +490,7 @@ int write_frame(int fd, int type, char *buffer, size_t length)
     else
     {
       n_written = write(fd, buffer, SU_FRAME_SIZE);
-      log_debug("TRANSMITTER: SU frame sent to transmitter(%x %x %x %x %x) (%d bytes written)\n", buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], res);
+      log_debug(log_fp,"TRANSMITTER: SU frame sent to transmitter(%x %x %x %x %x) (%d bytes written)\n", buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], res);
     }
 
     // Activate 3 second alarm, for timeout
@@ -500,7 +507,7 @@ int write_frame(int fd, int type, char *buffer, size_t length)
       // Returns after a char has been read or after timer expired (see VMIN and TIME)
       res = read(fd, &currentByte, 1);
 
-      log_debug("TRANSMITTER: received byte(0x%x - char:%c)(read %d bytes)", currentByte, (char)currentByte, res);
+      log_debug(log_fp,"TRANSMITTER: received byte(0x%x - char:%c)(read %d bytes)", currentByte, (char)currentByte, res);
 
       // State-machine processes the read byte
       tsm_process_input(&st_machine, currentByte);
@@ -518,7 +525,7 @@ int write_frame(int fd, int type, char *buffer, size_t length)
             // Update the sequence number (if 1 -> 0, if 0 -> 1)
 
             alarm(0);
-            log_debug("TRANSMITTER: ACK(%d) received", nextSequenceNumber);
+            log_debug(log_fp,"TRANSMITTER: ACK(%d) received", nextSequenceNumber);
             connection_info.sequenceNumber = nextSequenceNumber;
             return n_written;
           }
@@ -527,7 +534,7 @@ int write_frame(int fd, int type, char *buffer, size_t length)
             // NACK received, try to send the same data frame again
             // numTries is reseted because no timeout occured (a transmission error happened)
 
-            log_debug("TRANSMITTER: NACK(%d) received", connection_info.sequenceNumber);
+            log_debug(log_fp,"TRANSMITTER: NACK(%d) received", connection_info.sequenceNumber);
             numTries = 1;
             break;
           }
@@ -548,7 +555,7 @@ int write_frame(int fd, int type, char *buffer, size_t length)
           build_su_frame(response, ADDR_TRANSM_RES, CONTROL_UA);
 
           int res = write(fd, response, SU_FRAME_SIZE);
-          log_debug("TRANSMITTER: UA sent to transmitter(%x %x %x %x %x) (%d bytes written)\n", response[0], response[1], response[2], response[3], response[4], res);
+          log_debug(log_fp,"TRANSMITTER: UA sent to transmitter(%x %x %x %x %x) (%d bytes written)\n", response[0], response[1], response[2], response[3], response[4], res);
 
           return fd;
         }
@@ -580,7 +587,7 @@ int receiver_close(int fd)
   timedOut = 0;
   numTries = 1;
 
-  log_debug("RECEIVER: started listening for disconnecting calls");
+  log_debug(log_fp,"RECEIVER: started listening for disconnecting calls");
 
   // Wait for disconnecting call from the transmitter
   while (numTries <= MAX_TIMEOUT_RETRY_CNT)
@@ -592,7 +599,7 @@ int receiver_close(int fd)
     // Returns after a char has been read or after timer expired (see VMIN and TIME)
     res = read(fd, &currentByte, 1);
 
-    log_debug("RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte, (char)currentByte, res);
+    log_debug(log_fp,"RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte, (char)currentByte, res);
 
     // State-machine processes the read byte
     sm_processInput(&st_machine, currentByte); /* state-machine processes the read byte */
@@ -601,7 +608,7 @@ int receiver_close(int fd)
     // acknowledgement of that disconnect expired, send the response again
     if (disconnecting && timedOut)
     {
-      log_debug("RECEIVER: disc timeout happened, trying again (tried %d time(s))", numTries);
+      log_debug(log_fp,"RECEIVER: disc timeout happened, trying again (tried %d time(s))", numTries);
       res = write(fd, frame, SU_FRAME_SIZE);
       alarm(3);
       timedOut = 0;
@@ -614,7 +621,7 @@ int receiver_close(int fd)
 
       if (process_result == CONTROL_DISC)
       { // Frame was a DISC command, send a DISC command back and wait for a UA
-        log_debug("RECEIVER: DISC received, sending DISC to trasmitter");
+        log_debug(log_fp,"RECEIVER: DISC received, sending DISC to trasmitter");
         res = write(fd, frame, SU_FRAME_SIZE);
 
         // Turn previous alarm off and setup a new one
@@ -626,7 +633,7 @@ int receiver_close(int fd)
       else if ((process_result == CONTROL_UA) && disconnecting)
       { // Frame was a UA and the disconnecting was started previously (by receing a DISC command).
         // Disconnect sucessful
-        log_debug("RECEIVER: UA received, returning...");
+        log_debug(log_fp,"RECEIVER: UA received, returning...");
         alarm(0);
         return 0;
       }

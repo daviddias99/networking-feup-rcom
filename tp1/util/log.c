@@ -87,10 +87,13 @@ void log_set_quiet(int enable) {
 }
 
 
-void log_log(int level, const char *file, int line, const char *fmt, ...) {
+void log_log(FILE* fp,int level, const char *file, int line, const char *fmt, ...) {
   if (level < L.level) {
     return;
   }
+
+  if(fp == NULL)
+    fp = stdout;
 
   /* Acquire lock */
   lock();
@@ -100,7 +103,7 @@ void log_log(int level, const char *file, int line, const char *fmt, ...) {
   struct tm *lt = localtime(&t);
 
   /* Log to stderr */
-  if (!L.quiet) {
+  if (0) {
     va_list args;
     char buf[16];
     buf[strftime(buf, sizeof(buf), "%H:%M:%S", lt)] = '\0';
@@ -119,16 +122,16 @@ void log_log(int level, const char *file, int line, const char *fmt, ...) {
   }
 
   /* Log to file */
-  if (L.fp) {
+  if (fp) {
     va_list args;
     char buf[32];
     buf[strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", lt)] = '\0';
-    fprintf(L.fp, "%s %-5s %s:%d: ", buf, level_names[level], file, line);
+    fprintf(fp, "%s %-5s %s:%d: ", buf, level_names[level], file, line);
     va_start(args, fmt);
-    vfprintf(L.fp, fmt, args);
+    vfprintf(fp, fmt, args);
     va_end(args);
-    fprintf(L.fp, "\n");
-    fflush(L.fp);
+    fprintf(fp, "\n");
+    fflush(fp);
   }
 
   /* Release lock */

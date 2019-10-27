@@ -8,19 +8,29 @@
 #include "./app_send.h"
 #include "./app_receive.h"
 
+FILE* log_fp = NULL;
+
 int get_file_path_from_user(char* path){
 
     printf("File path : ");
     fflush(stdout);
     fgets(path, 255, stdin);
-    log_debug("APP_T: Read path(%s) from user", path);
+    log_debug(log_fp,"APP_T: Read path(%s) from user", path);
     path[strlen(path) - 1] = '\0';
 
     return 0;
 }
 
+void init_logging(){
+
+  log_fp = fopen("app_log.txt","w");
+  app_snd_set_log_fp(log_fp);
+  app_rcv_set_log_fp(log_fp);
+}
 
 int main(int argc, char const *argv[]) {
+
+    init_logging();
 
     if (argc != 2) {
       printf("Usage:\tserial_transfer Role\n\tex: serial_transfer receiver\n");
@@ -65,7 +75,7 @@ void log_control_packet(uint8_t* packet, uint8_t packet_size) {
         i++;
         printf("    value :");
         for (uint8_t j = 0; j < length; j++) {
-            printf(" %d", packet[i + j]);
+            printf(" %x", packet[i + j]);
         }
         printf("\n");
         i += length;
@@ -81,6 +91,6 @@ void log_data_packet(uint8_t* packet) {
 
     printf("data :");
     for (size_t i = 0; i < length; i++)
-        printf(" %d", packet[4 + i]);
+        printf(" %x", packet[4 + i]);
     printf("\n");
 }
