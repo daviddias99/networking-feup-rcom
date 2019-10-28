@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define MAX_PACKET_DATA             200
+#define MAX_PACKET_DATA             500
 #define PACKET_SIZE                 (4 + MAX_PACKET_DATA)
 
 typedef struct control_info_st {
