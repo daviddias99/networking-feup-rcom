@@ -142,14 +142,13 @@ void sm_i_c_rcv_st_handler(struct receiver_state_machine *st_machine, uint8_t re
 
 void sm_i_data_rcv_st_handler(struct receiver_state_machine *st_machine, uint8_t receivedByte)
 { 
-  if (st_machine->currentByte_idx % 20 == 0)
-    printf("idx: %ld\n", st_machine->currentByte_idx);
+
   // TODO: Change this limit
   if(st_machine->currentByte_idx == st_machine->allocatedMemory){
 
     st_machine->allocatedMemory *= 2;
     st_machine->frame = realloc(st_machine->frame, st_machine->allocatedMemory);
-    printf("\n\n REALLOC MEMORY %ld\n\n", st_machine->allocatedMemory);
+    log_debug(log_fp,"\n\n REALLOC MEMORY %ld\n\n", st_machine->allocatedMemory);
   }
 
   if (receivedByte == 0x7d)
@@ -287,6 +286,15 @@ static void (*rcv_event_handlers[])(struct receiver_state_machine *, uint8_t) = 
 
 void sm_processInput(struct receiver_state_machine *st_machine, uint8_t receivedByte)
 {
+
+if(st_machine->currentByte_idx == st_machine->allocatedMemory){
+
+    st_machine->allocatedMemory *= 2;
+    st_machine->frame = realloc(st_machine->frame, st_machine->allocatedMemory);
+    log_debug(log_fp,"\n\n REALLOC MEMORY %ld\n\n", st_machine->allocatedMemory);
+  }
+
+
    (*rcv_event_handlers[st_machine->currentState])(st_machine,receivedByte);
 
 }

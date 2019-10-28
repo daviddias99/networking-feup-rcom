@@ -1,9 +1,8 @@
 #include <stdbool.h>
 
-#define PACKET_MAX_DATA_SIZE            100
-
 #include "./app_send.h"
 #include "./app_receive.h"
+
 
 FILE* log_fp = NULL;
 
@@ -107,4 +106,22 @@ void log_data_packet(uint8_t* packet) {
     for (size_t i = 0; i < length; i++)
         printf(" %x", packet[4 + i]);
     printf("\n");
+}
+
+
+void progress_bar(const char* prefix, size_t count, size_t max_count) {
+
+    int progress = count * 100 / max_count;
+    
+    fflush(stdout);
+    printf("\r%s : %3d%% [", prefix, progress);
+
+    for (uint8_t i = 0; i < progress; i++)
+        printf("#");
+    for (uint8_t i = progress; i < 100; i++)
+        printf(" ");
+    printf("]"); 
+
+	if (progress == 100)
+		printf("\n");
 }

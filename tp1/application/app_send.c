@@ -52,20 +52,34 @@ int send_file(int port, char* file_path, size_t packet_size) {
 
     log_debug(log_fp,"APP_T: Building control packet(%d bytes)",control_packet_size);
 
+<<<<<<< HEAD
     uint8_t* file_data = malloc(sizeof(uint8_t) * packet_size);
+=======
+    char file_data[MAX_PACKET_DATA];
+>>>>>>> a2ed39fd2551dbe04a243b0203b701a854cee704
     int bytes_read;
 
     int serial_port_fd;
 
     // open the serial port
 
+<<<<<<< HEAD
     log_debug(log_fp,"APP_T: attempting to open serial port...");
     serial_port_fd = llopen(port, TRANSMITTER);
+=======
+    log_debug(log_fp, "APP_T: attempting to open serial port...");
+    serial_port_fd = llopen(0, TRANSMITTER);
+>>>>>>> a2ed39fd2551dbe04a243b0203b701a854cee704
 
     while (serial_port_fd < 0) {
         sleep(1);
+<<<<<<< HEAD
         log_debug(log_fp,"APP_T: attempting to open serial port...");
         serial_port_fd = llopen(port, TRANSMITTER);  
+=======
+        log_debug(log_fp, "APP_T: attempting to open serial port...");
+        serial_port_fd = llopen(0, TRANSMITTER);  
+>>>>>>> a2ed39fd2551dbe04a243b0203b701a854cee704
     }
 
     int nWritten;
@@ -77,11 +91,12 @@ int send_file(int port, char* file_path, size_t packet_size) {
         nWritten = llwrite(serial_port_fd, control_packet,control_packet_size);
         log_debug(log_fp,"APP_T: Writting control packet(START) to serial port (%d bytes written)",nWritten);
         
-        if(nWritten == -1)
+        if (nWritten == -1)
             continue;
-    } while(nWritten != control_packet_size);
+    } while (nWritten != control_packet_size);
 
 
+    size_t progress = 0;
     // read chunks of the outbound file and send them to the receiver
     while ((bytes_read = read(file_fd, file_data, packet_size)) > 0) {
         uint8_t* data_packet;
@@ -101,6 +116,9 @@ int send_file(int port, char* file_path, size_t packet_size) {
 
         } while (nWritten != bytes_read + 4);
         free(data_packet);
+
+        progress += bytes_read;
+        progress_bar("Sending file", progress, file_st.st_size);
     }
 
     // TODO: fix this
@@ -110,19 +128,19 @@ int send_file(int port, char* file_path, size_t packet_size) {
         exit(1);
     }*/
 
-    // TODO: modify start packet to send end packet
+    // modify start packet to send end packet
     control_packet[0] = END;
 
     // send the END control packet
-    do{
+    do {
 
         nWritten = llwrite(serial_port_fd,control_packet,control_packet_size);
         log_debug(log_fp,"APP_T: Writting control packet(END) to serial port (%d bytes written)",nWritten);
 
-    }while(nWritten != control_packet_size);
+    } while (nWritten != control_packet_size);
 
 
-    for (uint8_t i = 0; i < sizeof(tlv_list) / sizeof(tlv*); i++) {
+    for (size_t i = 0; i < sizeof(tlv_list) / sizeof(tlv*); i++) {
         destroy_tlv(tlv_list[i]);
     }
 
@@ -177,7 +195,7 @@ uint8_t* build_control_packet(packet_type type, uint8_t* packet_size, tlv* tlv_l
 }
 
 
-uint8_t* build_data_packet(uint8_t* data, uint8_t data_size) {
+uint8_t* build_data_packet(uint8_t* data, size_t data_size) {
     static uint8_t sequence_number = 0;
     sequence_number %= 256;
 

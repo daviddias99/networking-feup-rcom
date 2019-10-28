@@ -27,4 +27,6 @@ void log_control_packet(uint8_t* packet, uint8_t packet_size);
 void log_data_packet(uint8_t* packet);
 
 
+void progress_bar(const char* prefix, size_t count, size_t max_count);
+
 #endif
