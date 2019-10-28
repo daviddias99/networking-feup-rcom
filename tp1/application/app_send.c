@@ -176,7 +176,7 @@ uint8_t* build_control_packet(packet_type type, uint8_t* packet_size, tlv* tlv_l
 }
 
 
-uint8_t* build_data_packet(uint8_t* data, uint8_t data_size) {
+uint8_t* build_data_packet(uint8_t* data, size_t data_size) {
     static uint8_t sequence_number = 0;
     sequence_number %= 256;
 
