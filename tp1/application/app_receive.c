@@ -21,7 +21,6 @@ int receive_file(int port) {
 
     uint8_t packet[PACKET_SIZE];
     int bytes_read = llread(port_fd, packet);
-    log_control_packet(packet, bytes_read);
 
     if (packet[0] != START) {
         printf("Expected start packet\n");
@@ -29,7 +28,6 @@ int receive_file(int port) {
     }
 
     control_info* start_info = create_control_info(packet, bytes_read);
-    log_control_packet(packet, bytes_read);
 
 
     FILE* file_ptr = fopen(start_info->file_name, "wb");
@@ -50,7 +48,6 @@ int receive_file(int port) {
         else if (packet[0] != DATA) {
             printf("Found unexpected type : %d\n\n", packet[0]);
 
-            log_control_packet(packet, bytes_read);
 
             exit(1);
         }
@@ -58,7 +55,7 @@ int receive_file(int port) {
         fwrite(packet + 4, 1, bytes_read - 4, file_ptr);
         //write(file_fd, packet + 4, bytes_read - 4);
 
-        progress += bytes_read;
+        progress += bytes_read - 4;
         progress_bar("Receiving file", progress, start_info->file_size);
     }
 
@@ -86,7 +83,6 @@ int receive_file(int port) {
 }
 
 control_info* create_control_info(uint8_t* packet, const size_t packet_size) {
-    log_control_packet(packet, packet_size);
 
     if (packet[0] != END && packet[0] != START) {
         printf("Unexpected packet type\n");
