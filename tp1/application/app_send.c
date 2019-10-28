@@ -53,7 +53,7 @@ int send_file(char* file_path) {
     log_debug(log_fp,"APP_T: Building control packet(%d bytes)",control_packet_size);
 
     char* file_data[MAX_PACKET_DATA];
-    uint8_t bytes_read;
+    int bytes_read;
 
     int serial_port_fd;
 
