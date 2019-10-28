@@ -104,21 +104,15 @@ void progress_bar(const char* prefix, size_t count, size_t max_count) {
 
     int progress = count * 100 / max_count;
     
-fflush(stdout);
+    fflush(stdout);
     printf("\r%s : %3d%% [", prefix, progress);
 
-    for (uint8_t i = 0; i < progress; i++) {
-        printf("|");
-    }
-
-    for (uint8_t i = progress; i < 100; i++) {
+    for (uint8_t i = 0; i < progress; i++)
+        printf("#");
+    for (uint8_t i = progress; i < 100; i++)
         printf(" ");
-    }
-
     printf("]"); 
 
-	if(progress == 100)
+	if (progress == 100)
 		printf("\n");
-
-
 }
