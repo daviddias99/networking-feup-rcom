@@ -6,6 +6,28 @@ void rcv_stm_set_log_fp(FILE* fp){
   log_fp = fp;
 }
 
+struct receiver_state_machine* create_rcv_state_machine() {
+  struct receiver_state_machine * st_machine = malloc(sizeof(struct receiver_state_machine));
+  st_machine->currentState = R_STATE_START;
+  st_machine->connectionEstablished = false;
+  st_machine->currentByte_idx = 0;
+  st_machine->allocatedMemory = I_FRAME_START_SIZE;
+  st_machine->frame = malloc(sizeof(uint8_t) * st_machine->allocatedMemory);
+
+  return st_machine;
+}
+
+void reset_rcv_state_machine(struct receiver_state_machine* st_machine) {
+  st_machine->currentState = R_STATE_START;
+  st_machine->currentByte_idx = 0;
+}
+
+void destroy_rcv_state_machine(struct receiver_state_machine* st_machine) {
+  free(st_machine->frame);
+  free(st_machine);
+}
+
+
 void sm_start_st_handler(struct receiver_state_machine *st_machine, uint8_t receivedByte)
 {
 
@@ -119,13 +141,15 @@ void sm_i_c_rcv_st_handler(struct receiver_state_machine *st_machine, uint8_t re
 }
 
 void sm_i_data_rcv_st_handler(struct receiver_state_machine *st_machine, uint8_t receivedByte)
-{
+{ 
+  if (st_machine->currentByte_idx % 20 == 0)
+    printf("idx: %d\n", st_machine->currentByte_idx);
   // TODO: Change this limit
-  if(st_machine->currentByte_idx == I_FRAME_SIZE){
+  if(st_machine->currentByte_idx == st_machine->allocatedMemory){
 
-    st_machine->currentState = R_STATE_START;
-    log_debug(log_fp,"STM: At Data RCV state --> At start state (data size exceed limits)");
-    return;
+    st_machine->allocatedMemory *= 2;
+    st_machine->frame = realloc(st_machine->frame, st_machine->allocatedMemory);
+    printf("\n\n REALLOC MEMORY %d\n\n", st_machine->allocatedMemory);
   }
 
   if (receivedByte == 0x7d)

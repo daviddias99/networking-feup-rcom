@@ -29,6 +29,7 @@ typedef struct linklayer
   unsigned int sequenceNumber;
   int role;
   bool connectionEstablished;
+  struct receiver_state_machine * rcv_st_machine;
 
 } linklayer_info;
 
@@ -98,7 +99,7 @@ int process_read_su_frame(int fd, uint8_t frame[])
 
     sendUA(fd);                         // Send unnumbered acknowledgement to sender
     connection_info.sequenceNumber = 0; // The data transfer is about to start, so the sequence number is set to 0
-    connection_info.connectionEstablished = true;
+    connection_info.rcv_st_machine->connectionEstablished = true;
 
     return CONTROL_SET;
   }
@@ -261,13 +262,9 @@ int receiver_open(int fd)
   int read_bytes_cnt;
 
   // Receiver state machine setup
-  struct receiver_state_machine st_machine;
-  st_machine.currentState = R_STATE_START;
-  st_machine.connectionEstablished = false;
-  st_machine.currentByte_idx = 0;
+  connection_info.rcv_st_machine = create_rcv_state_machine();
 
   // Linklayer connection info initial values
-  connection_info.connectionEstablished = false;
   connection_info.sequenceNumber = 0;
 
   // Frame listening
@@ -281,12 +278,12 @@ int receiver_open(int fd)
     log_debug(log_fp,"RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte, (char)currentByte, read_bytes_cnt);
 
     // State-machine processes the read byte
-    sm_processInput(&st_machine, currentByte);
+    sm_processInput(connection_info.rcv_st_machine, currentByte);
 
     // If the state machine reached it's stopping state process the frame
-    if (st_machine.currentState == R_STATE_SU_STOP)
+    if (connection_info.rcv_st_machine->currentState == R_STATE_SU_STOP)
     {
-      process_read_su_frame(fd, st_machine.frame);
+      process_read_su_frame(fd, connection_info.rcv_st_machine->frame);
       return fd;
     }
   }
@@ -377,10 +374,7 @@ int llread(int fd, uint8_t *buffer)
   int res;
 
   // Initialize the received frame processing state-machine
-  struct receiver_state_machine st_machine;
-  st_machine.currentState = R_STATE_START;
-  st_machine.connectionEstablished = connection_info.connectionEstablished;
-  st_machine.currentByte_idx = 0;
+  reset_rcv_state_machine(connection_info.rcv_st_machine);
 
   log_debug(log_fp,"RECEIVER: started listening for data");
 
@@ -397,18 +391,18 @@ int llread(int fd, uint8_t *buffer)
     log_debug(log_fp,"RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte, (char)currentByte, res);
 
     // Process the read byte
-    sm_processInput(&st_machine, currentByte);
+    sm_processInput(connection_info.rcv_st_machine, currentByte);
 
-    if (st_machine.currentState == R_STATE_SU_STOP)
+    if (connection_info.rcv_st_machine->currentState == R_STATE_SU_STOP)
     { // SU frame reading stop-state reached
 
-      if (process_read_su_frame(fd, st_machine.frame) == CONTROL_DISC)
+      if (process_read_su_frame(fd, connection_info.rcv_st_machine->frame) == CONTROL_DISC)
         return 0;
     }
-    else if (st_machine.currentState == R_STATE_I_STOP)
+    else if (connection_info.rcv_st_machine->currentState == R_STATE_I_STOP)
     { // Data frame reading stop-state reached
 
-      int nRead = process_read_i_frame(fd, st_machine.frame, st_machine.currentByte_idx, buffer);
+      int nRead = process_read_i_frame(fd, connection_info.rcv_st_machine->frame, connection_info.rcv_st_machine->currentByte_idx, buffer);
 
       if (nRead >= 0)
         return nRead;
@@ -576,10 +570,7 @@ int receiver_close(int fd)
   bool disconnecting = false; // True of a disconnecting call from the transmitter was received
 
   // Setup the state-machine
-  struct receiver_state_machine st_machine;
-  st_machine.currentState = R_STATE_START;
-  st_machine.connectionEstablished = connection_info.connectionEstablished;
-  st_machine.currentByte_idx = 0;
+  reset_rcv_state_machine(connection_info.rcv_st_machine);
 
   // Frame building
   uint8_t frame[SU_FRAME_SIZE];
@@ -604,7 +595,7 @@ int receiver_close(int fd)
     log_debug(log_fp,"RECEIVER: received byte(0x%x - char:%c)(read %d bytes)", currentByte, (char)currentByte, res);
 
     // State-machine processes the read byte
-    sm_processInput(&st_machine, currentByte); /* state-machine processes the read byte */
+    sm_processInput(connection_info.rcv_st_machine, currentByte); /* state-machine processes the read byte */
 
     // If the receiver received a disconnecting call and sent the responde but the time for receiving the
     // acknowledgement of that disconnect expired, send the response again
@@ -616,10 +607,10 @@ int receiver_close(int fd)
       timedOut = 0;
     }
 
-    if (st_machine.currentState == R_STATE_SU_STOP)
+    if (connection_info.rcv_st_machine->currentState == R_STATE_SU_STOP)
     { // Complete frame received from transmitter
 
-      int process_result = process_read_su_frame(fd, st_machine.frame);
+      int process_result = process_read_su_frame(fd, connection_info.rcv_st_machine->frame);
 
       if (process_result == CONTROL_DISC)
       { // Frame was a DISC command, send a DISC command back and wait for a UA
@@ -637,6 +628,7 @@ int receiver_close(int fd)
         // Disconnect sucessful
         log_debug(log_fp,"RECEIVER: UA received, returning...");
         alarm(0);
+        destroy_rcv_state_machine(connection_info.rcv_st_machine);
         return 0;
       }
     }

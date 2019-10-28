@@ -187,7 +187,7 @@ uint8_t* build_data_packet(uint8_t* data, uint8_t data_size) {
     packet[0] = DATA;
     packet[1] = sequence_number;
     packet[2] = data_size / 256;
-    packet[3] = data_size - packet[2];
+    packet[3] = data_size % 256;
 
     uint8_t* ptr = memcpy(packet + 4, (uint8_t *) data, data_size);
     if (ptr != packet + 4) {

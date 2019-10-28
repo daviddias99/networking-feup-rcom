@@ -36,6 +36,7 @@
 
 #define BIT(n)                      (0x01<<(n))
 
+#define I_FRAME_START_SIZE  256
 
 
 #define DATA                        0
