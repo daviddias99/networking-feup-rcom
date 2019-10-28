@@ -52,34 +52,20 @@ int send_file(int port, char* file_path, size_t packet_size) {
 
     log_debug(log_fp,"APP_T: Building control packet(%d bytes)",control_packet_size);
 
-<<<<<<< HEAD
     uint8_t* file_data = malloc(sizeof(uint8_t) * packet_size);
-=======
-    char file_data[MAX_PACKET_DATA];
->>>>>>> a2ed39fd2551dbe04a243b0203b701a854cee704
     int bytes_read;
 
     int serial_port_fd;
 
     // open the serial port
 
-<<<<<<< HEAD
     log_debug(log_fp,"APP_T: attempting to open serial port...");
     serial_port_fd = llopen(port, TRANSMITTER);
-=======
-    log_debug(log_fp, "APP_T: attempting to open serial port...");
-    serial_port_fd = llopen(0, TRANSMITTER);
->>>>>>> a2ed39fd2551dbe04a243b0203b701a854cee704
 
     while (serial_port_fd < 0) {
         sleep(1);
-<<<<<<< HEAD
         log_debug(log_fp,"APP_T: attempting to open serial port...");
         serial_port_fd = llopen(port, TRANSMITTER);  
-=======
-        log_debug(log_fp, "APP_T: attempting to open serial port...");
-        serial_port_fd = llopen(0, TRANSMITTER);  
->>>>>>> a2ed39fd2551dbe04a243b0203b701a854cee704
     }
 
     int nWritten;
