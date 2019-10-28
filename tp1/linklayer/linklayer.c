@@ -41,6 +41,7 @@ static FILE *log_fp = NULL;
 
 static void alarm_handler(int signo)
 {
+  UNUSED(signo);
   printf("Alarm # %d\n", numTries);
   timedOut = 1;
   numTries++;
@@ -126,7 +127,7 @@ int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, uint8_t *bu
   { // If the data bcc is valid check for the sequence number
 
     log_debug(log_fp,"RECEIVER: Data BCC is valid");
-    int packetSeqNumber = frame[CTRL_INDEX] >> 6; // The sequence number is bit #6 of the control byte
+    unsigned int packetSeqNumber = frame[CTRL_INDEX] >> 6; // The sequence number is bit #6 of the control byte
 
     log_debug(log_fp,"RECEIVER: Received frame with seq=%d, desired was seq=%d", packetSeqNumber, connection_info.sequenceNumber);
     if (packetSeqNumber == connection_info.sequenceNumber)
