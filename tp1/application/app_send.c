@@ -8,7 +8,7 @@ void app_snd_set_log_fp(FILE* fp){
   log_fp = fp;
 }
 
-int send_file(char* file_path) {
+int send_file(int port, char* file_path, size_t packet_size) {
 
     log_debug(log_fp,"APP_T: Start file(%s) sending to receiver procedure", file_path);
 
@@ -52,7 +52,7 @@ int send_file(char* file_path) {
 
     log_debug(log_fp,"APP_T: Building control packet(%d bytes)",control_packet_size);
 
-    char* file_data[MAX_PACKET_DATA];
+    uint8_t* file_data = malloc(sizeof(uint8_t) * packet_size);
     int bytes_read;
 
     int serial_port_fd;
@@ -60,12 +60,12 @@ int send_file(char* file_path) {
     // open the serial port
 
     log_debug(log_fp,"APP_T: attempting to open serial port...");
-    serial_port_fd = llopen(0,TRANSMITTER);
+    serial_port_fd = llopen(port, TRANSMITTER);
 
-    while(serial_port_fd < 0){
+    while (serial_port_fd < 0) {
         sleep(1);
         log_debug(log_fp,"APP_T: attempting to open serial port...");
-        serial_port_fd = llopen(0,TRANSMITTER);  
+        serial_port_fd = llopen(port, TRANSMITTER);  
     }
 
     int nWritten;
@@ -83,14 +83,14 @@ int send_file(char* file_path) {
 
 
     // read chunks of the outbound file and send them to the receiver
-    while ((bytes_read = read(file_fd, file_data, MAX_PACKET_DATA)) > 0) {
+    while ((bytes_read = read(file_fd, file_data, packet_size)) > 0) {
         uint8_t* data_packet;
         if ((data_packet = build_data_packet((uint8_t *) file_data, bytes_read)) == NULL) {
             perror("Error!\n");
             break;
         }
 
-        log_data_packet( data_packet);
+        log_data_packet(data_packet);
         printf("\n");
 
         // send the packet through the serial port
@@ -131,6 +131,7 @@ int send_file(char* file_path) {
     log_debug(log_fp,"APP_T: Closing the connection with the receiver..." );
     llclose(serial_port_fd);
     free(control_packet);
+    free(file_data);
     close(file_fd);
 
     return 0;
