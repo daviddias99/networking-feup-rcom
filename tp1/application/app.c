@@ -66,6 +66,8 @@ int main(int argc, char const *argv[]) {
 }
 
 void log_control_packet(uint8_t* packet, uint8_t packet_size) {
+
+    printf("-- CONTROL PACKET -- \n");
     printf("type: %d\n", packet[0]);
 
     uint8_t i = 1;
@@ -87,6 +89,7 @@ void log_control_packet(uint8_t* packet, uint8_t packet_size) {
 }
 
 void log_data_packet(uint8_t* packet) {
+    printf("-- DATA PACKET -- \n");
     printf("control : %d\n", packet[0]);
     printf("sequence number : %d\n", packet[1]);
 
