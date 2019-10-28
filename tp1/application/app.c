@@ -103,19 +103,22 @@ void log_data_packet(uint8_t* packet) {
 void progress_bar(const char* prefix, size_t count, size_t max_count) {
 
     int progress = count * 100 / max_count;
-    int padding_left = progress * PROGRESS_BAR_PADDING;
-    int padding_right = PROGRESS_BAR_PADDING - padding_left;
-
-    printf("%s : %3d%% [", prefix, progress);
+    
+fflush(stdout);
+    printf("\r%s : %3d%% [", prefix, progress);
 
     for (uint8_t i = 0; i < progress; i++) {
         printf("|");
     }
 
     for (uint8_t i = progress; i < 100; i++) {
-        print(" ")
+        printf(" ");
     }
 
-    printf("]\r"); 
-    fflush(stdout);
+    printf("]"); 
+
+	if(progress == 100)
+		printf("\n");
+
+
 }
