@@ -102,9 +102,9 @@ void log_data_packet(uint8_t* packet) {
 
 void progress_bar(const char* prefix, size_t count, size_t max_count) {
 
-    size_t progress = count / max_count;
-    size_t padding_left = progress * PROGRESS_BAR_PADDING;
-    size_t padding_right = PROGRESS_BAR_PADDING - padding_left;
+    int progress = count / max_count;
+    int padding_left = progress * PROGRESS_BAR_PADDING;
+    int padding_right = PROGRESS_BAR_PADDING - padding_left;
 
     printf ("\r%s : %3d%% [%.*s%*s]", prefix, progress, padding_left, PROGRESS_BAR_STRING, padding_right, "");
     fflush(stdout);
