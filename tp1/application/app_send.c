@@ -82,6 +82,7 @@ int send_file(char* file_path) {
     } while(nWritten != control_packet_size);
 
 
+    size_t progress = 0;
     // read chunks of the outbound file and send them to the receiver
     while ((bytes_read = read(file_fd, file_data, MAX_PACKET_DATA)) > 0) {
         uint8_t* data_packet;
@@ -101,6 +102,9 @@ int send_file(char* file_path) {
 
         } while (nWritten != bytes_read + 4);
         free(data_packet);
+
+        progress += bytes_read;
+        progress_bar("Sending file", progress, file_st.st_size);
     }
 
     if (bytes_read == -1){

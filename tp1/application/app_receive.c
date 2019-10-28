@@ -41,7 +41,7 @@ int receive_file(int port) {
     }
     */
 
-
+    size_t progress = 0;
     while ((bytes_read = llread(port_fd, packet)) > 0) {
 
         if (packet[0] == END) {
@@ -57,6 +57,9 @@ int receive_file(int port) {
 
         fwrite(packet + 4, 1, bytes_read - 4, file_ptr);
         //write(file_fd, packet + 4, bytes_read - 4);
+
+        progress += bytes_read;
+        progress_bar("Receiving file", progress, start_info->file_size);
     }
 
     if (bytes_read < 0) {
