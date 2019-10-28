@@ -19,7 +19,7 @@ int receive_file(int port) {
         exit(1);
     }
 
-    uint8_t* packet[2000];
+    uint8_t packet[2000];
     int bytes_read = llread(port_fd, packet);
 
     if (packet[0] != START) {
