@@ -91,8 +91,8 @@ int send_file(int port, char* file_path, size_t packet_size) {
             break;
         }
 
-        log_data_packet(data_packet);
-        printf("\n");
+        //log_data_packet(data_packet);
+        //printf("\n");
 
         // send the packet through the serial port
 
