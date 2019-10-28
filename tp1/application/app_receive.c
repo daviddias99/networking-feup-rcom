@@ -19,7 +19,7 @@ int receive_file(int port) {
         exit(1);
     }
 
-    uint8_t packet[512];
+    uint8_t packet[PACKET_SIZE];
     int bytes_read = llread(port_fd, packet);
     log_control_packet(packet, bytes_read);
 
