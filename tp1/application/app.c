@@ -1,12 +1,16 @@
 #include <stdbool.h>
 
+#include "./app_send.h"
+#include "./app_receive.h"
+
+
 #define FALSE 0
 #define TRUE 1
 
-#define PACKET_MAX_DATA_SIZE            100
 
-#include "./app_send.h"
-#include "./app_receive.h"
+#define PROGRESS_BAR_STRING             "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+#define PROGRESS_BAR_PADDING            60
+
 
 FILE* log_fp = NULL;
 
@@ -93,4 +97,15 @@ void log_data_packet(uint8_t* packet) {
     for (size_t i = 0; i < length; i++)
         printf(" %x", packet[4 + i]);
     printf("\n");
+}
+
+
+void progress_bar(size_t count, size_t max_count) {
+
+    size_t progress = count / max_count;
+    size_t padding_left = progress * PROGRESS_BAR_PADDING;
+    size_t padding_right = PROGRESS_BAR_PADDING - padding_left;
+
+    printf ("\r%3d%% [%.*s%*s]", progress, padding_left, PROGRESS_BAR_STRING, padding_right, "");
+    fflush(stdout);
 }
