@@ -52,20 +52,20 @@ int send_file(char* file_path) {
 
     log_debug(log_fp,"APP_T: Building control packet(%d bytes)",control_packet_size);
 
-    char* file_data[MAX_PACKET_DATA];
+    char file_data[MAX_PACKET_DATA];
     int bytes_read;
 
     int serial_port_fd;
 
     // open the serial port
 
-    log_debug(log_fp,"APP_T: attempting to open serial port...");
-    serial_port_fd = llopen(0,TRANSMITTER);
+    log_debug(log_fp, "APP_T: attempting to open serial port...");
+    serial_port_fd = llopen(0, TRANSMITTER);
 
     while(serial_port_fd < 0){
         sleep(1);
-        log_debug(log_fp,"APP_T: attempting to open serial port...");
-        serial_port_fd = llopen(0,TRANSMITTER);  
+        log_debug(log_fp, "APP_T: attempting to open serial port...");
+        serial_port_fd = llopen(0, TRANSMITTER);  
     }
 
     int nWritten;
@@ -77,9 +77,9 @@ int send_file(char* file_path) {
         nWritten = llwrite(serial_port_fd, control_packet,control_packet_size);
         log_debug(log_fp,"APP_T: Writting control packet(START) to serial port (%d bytes written)",nWritten);
         
-        if(nWritten == -1)
+        if (nWritten == -1)
             continue;
-    } while(nWritten != control_packet_size);
+    } while (nWritten != control_packet_size);
 
 
     size_t progress = 0;
@@ -91,7 +91,7 @@ int send_file(char* file_path) {
             break;
         }
 
-        log_data_packet( data_packet);
+        log_data_packet(data_packet);
         printf("\n");
 
         // send the packet through the serial port
@@ -114,19 +114,19 @@ int send_file(char* file_path) {
         exit(1);
     }*/
 
-    // TODO: modify start packet to send end packet
+    // modify start packet to send end packet
     control_packet[0] = END;
 
     // send the END control packet
-    do{
+    do {
 
         nWritten = llwrite(serial_port_fd,control_packet,control_packet_size);
         log_debug(log_fp,"APP_T: Writting control packet(END) to serial port (%d bytes written)",nWritten);
 
-    }while(nWritten != control_packet_size);
+    } while (nWritten != control_packet_size);
 
 
-    for (uint8_t i = 0; i < sizeof(tlv_list) / sizeof(tlv*); i++) {
+    for (size_t i = 0; i < sizeof(tlv_list) / sizeof(tlv*); i++) {
         destroy_tlv(tlv_list[i]);
     }
 
@@ -180,7 +180,7 @@ uint8_t* build_control_packet(packet_type type, uint8_t* packet_size, tlv* tlv_l
 }
 
 
-uint8_t* build_data_packet(uint8_t* data, uint8_t data_size) {
+uint8_t* build_data_packet(uint8_t* data, size_t data_size) {
     static uint8_t sequence_number = 0;
     sequence_number %= 256;
 
