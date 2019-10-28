@@ -27,7 +27,7 @@ struct receiver_state_machine {
   receiver_state_t currentState;
   uint8_t* frame;
   size_t allocatedMemory;
-  int currentByte_idx;
+  size_t currentByte_idx;
   bool connectionEstablished;
 };
 

@@ -43,3 +43,4 @@
 #define CLOSE                       1
 #define OPEN                        2
 
+#define UNUSED(expr) (void)(expr);

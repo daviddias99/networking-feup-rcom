@@ -103,10 +103,12 @@ int send_file(char* file_path) {
         free(data_packet);
     }
 
+    // TODO: fix this
+    /*
     if (bytes_read == -1){
         perror("Error while reading the file \n");
         exit(1);
-    }
+    }*/
 
     // TODO: modify start packet to send end packet
     control_packet[0] = END;
