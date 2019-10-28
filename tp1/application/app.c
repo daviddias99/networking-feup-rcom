@@ -29,7 +29,7 @@ int main(int argc, char const *argv[]) {
     init_logging();
 
     if (argc < 3) {
-      printf("Usage:\n\t%s transmitter [port] [path] [packet_size]\n\t%s receiver [port]\n\n", argv[0], argv[0]);
+      printf("Usage:\t%s transmitter [port] [path] [packet_size]\n\t%s receiver [port]\n\n", argv[0], argv[0]);
       exit(1);
     }
 
@@ -53,12 +53,12 @@ int main(int argc, char const *argv[]) {
         char* path;
         
         if (argc != 5) {
-            printf("Usage:\n\t%s transmitter [port] [path] [packet_size]\n", argv[0]);
+            printf("Usage:\t%s transmitter [port] [path] [packet_size]\n", argv[0]);
             exit(-1);
         } 
 
         if ((packet_size = atoi(argv[4])) < 0) {
-            printf("Usage:\n\t%s transmitter [port] [path] [packet_size]\n", argv[0]);
+            printf("Usage:\t%s transmitter [port] [path] [packet_size]\n", argv[0]);
         }
 
         path = malloc(strlen(argv[3]) * sizeof(char));
