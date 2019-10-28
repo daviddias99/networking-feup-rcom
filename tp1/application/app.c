@@ -4,14 +4,6 @@
 #include "./app_receive.h"
 
 
-#define FALSE 0
-#define TRUE 1
-
-
-#define PROGRESS_BAR_STRING             "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
-#define PROGRESS_BAR_PADDING            60
-
-
 FILE* log_fp = NULL;
 
 int get_file_path_from_user(char* path){
@@ -36,32 +28,49 @@ int main(int argc, char const *argv[]) {
 
     init_logging();
 
-    if (argc != 2) {
-      printf("Usage:\tserial_transfer Role\n\tex: serial_transfer receiver\n");
+    if (argc < 3) {
+      printf("Usage:\n\t%s transmitter [port] [path] [packet_size]\n\t receiver [port]", argv[0]);
       exit(1);
     }
 
-    int role;
+    bool role;
+    int port;
 
-    if (strcmp(argv[1],"receiver") == 0)
-        role = FALSE;
+    if (strcmp(argv[1],"receiver") == 0) {
+        role = false;
+    }
     else if (strcmp(argv[1],"transmitter") == 0)
-        role = TRUE;
+        role = true;
     else {
         perror("Role not recognized. Exiting...");
         exit(2);
     }
-    char path[255];
+    
+    port = atoi(argv[1]);
 
-    if (role){
-       
-        get_file_path_from_user(path);
-        send_file(path);
+    if (role)  { 
+        int packet_size;
+        char* path;
+        
+        if (argc != 4) {
+            printf("Usage:\n\t%s transmitter [port] [path] [packet_size]\n", argv[0]);
+            exit(-1);
+        } 
+
+        if ((packet_size = atoi(argv[3])) < 0) {
+            printf("Usage:\n\t%s transmitter [port] [path] [packet_size]\n", argv[0]);
+        }
+
+        path = malloc(strlen(argv[2]) * sizeof(char));
+        path = strcpy(path, argv[2]);
+        send_file(port, path, packet_size);
+        free(path);
     }
     else {
-        receive_file(0);
+        receive_file(port);
     }
 
+    
     return 0;
 }
 
@@ -107,21 +116,15 @@ void progress_bar(const char* prefix, size_t count, size_t max_count) {
 
     int progress = count * 100 / max_count;
     
-fflush(stdout);
+    fflush(stdout);
     printf("\r%s : %3d%% [", prefix, progress);
 
-    for (uint8_t i = 0; i < progress; i++) {
-        printf("|");
-    }
-
-    for (uint8_t i = progress; i < 100; i++) {
+    for (uint8_t i = 0; i < progress; i++)
+        printf("#");
+    for (uint8_t i = progress; i < 100; i++)
         printf(" ");
-    }
-
     printf("]"); 
 
-	if(progress == 100)
+	if (progress == 100)
 		printf("\n");
-
-
 }

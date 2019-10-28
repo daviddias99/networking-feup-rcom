@@ -20,7 +20,7 @@
 #define PACKET_SIZE                 (4 + MAX_PACKET_DATA)
 
 
-int send_file(char* file_path);
+int send_file(int port, char* file_path, size_t packet_size);
 uint8_t* build_control_packet(packet_type type, uint8_t* packet_size, tlv* tlv_list[], const uint8_t tlv_list_size);
 uint8_t* build_data_packet(uint8_t* data, size_t data_size);
 
