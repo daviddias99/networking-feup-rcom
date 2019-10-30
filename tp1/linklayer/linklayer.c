@@ -44,22 +44,22 @@ static int transmitter_close(int fd);
 static int receiver_close(int fd);
 
 /**
- * @brief 
+ * @brief Writes a frame of a specific type to the file with fd received as argument 
  * 
- * @param fd 
- * @param type 
- * @param buffer 
- * @param length 
+ * @param fd              file descriptor of serial port to write
+ * @param type            can be OPEN, CLOSE or DATA
+ * @param buffer          frame to be sent in case of OPEN or CLOSE type, data to be sent in I frame in case of DATA type
+ * @param length          irrelevant in case of OPEN or CLOSE type, length of the data to be sent in I frame in case of DATA type
  * @return int 
  */
 static int write_frame(int fd, int type, uint8_t *buffer, size_t length);
 
 /**
- * @brief 
+ * @brief Writes data as an I frame to file with fd received as argument (does necessary stuffing)
  * 
- * @param fd 
- * @param buffer 
- * @param length 
+ * @param fd              file descriptor of serial port to write
+ * @param buffer          data to be sent in the I frame
+ * @param length          length of the buffer
  * @return int 
  */
 static int write_data(int fd, uint8_t *buffer, int length);
