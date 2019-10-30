@@ -479,8 +479,8 @@ int write_data(int fd, uint8_t *buffer, int length)
 int llwrite(int fd, uint8_t *buffer, int length)
 {
 
-    if(!connection_info.rcv_st_machine->connectionEstablished)
-      return -1;
+    // if(!connection_info.rcv_st_machine->connectionEstablished)
+    //   return -1;
 
   return write_frame(fd, DATA, buffer, length);
 }
@@ -490,8 +490,8 @@ int llread(int fd, uint8_t *buffer)
 
   int res;
 
-  if(!connection_info.rcv_st_machine->connectionEstablished)
-    return -1;
+  // if(!connection_info.rcv_st_machine->connectionEstablished)
+  //   return -1;
 
   // Initialize the received frame processing state-machine
   reset_rcv_state_machine(connection_info.rcv_st_machine);
