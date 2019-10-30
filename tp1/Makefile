@@ -8,7 +8,7 @@ SRC_LL = linklayer
 
 TARGET = penguin
 
-OBJS = $(ODIR)/tlv.o $(ODIR)/app.o $(ODIR)/app_send.o $(ODIR)/app_receive.o $(ODIR)/log.o  $(ODIR)/linklayer.o $(ODIR)/receiver_state_machine.o $(ODIR)/transmitter_state_machine.o
+OBJS = $(ODIR)/tlv.o $(ODIR)/app.o $(ODIR)/app_util.o $(ODIR)/app_send.o $(ODIR)/app_receive.o $(ODIR)/log.o  $(ODIR)/linklayer.o $(ODIR)/receiver_state_machine.o $(ODIR)/transmitter_state_machine.o
 
 
 .PHONY: all clean

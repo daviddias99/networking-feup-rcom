@@ -1,5 +1,5 @@
-#ifndef APP_H
-#define APP_H
+#ifndef APP_UTIL_H
+#define APP_UTIL_H
 
 
 #include "string.h"
@@ -12,8 +12,6 @@ typedef enum packet_type {
     START,
     END
 } packet_type;
-
-
 
 void log_control_packet(uint8_t* packet, uint8_t packet_size);
 void log_data_packet(uint8_t* packet);
