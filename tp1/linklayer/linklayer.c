@@ -478,11 +478,22 @@ int write_data(int fd, uint8_t *buffer, int length)
 
 int llwrite(int fd, uint8_t *buffer, int length)
 {
+  long ticks_seg = sysconf(_SC_CLK_TCK);
+  clock_t start, end;
+  struct tms t;
 
-    // if(!connection_info.rcv_st_machine->connectionEstablished)
-    //   return -1;
+  start = times(&t);
 
-  return write_frame(fd, DATA, buffer, length);
+  int bytes_written = write_frame(fd, DATA, buffer, length);
+
+  end = times(&t);
+
+  printf("BYTES:          %d\n", length);
+  printf("CLOCK:          %4.2fs\n", (double) (end - start) / ticks_seg);
+  printf("USER TIME:      %4.2fs\n", (double) t.tms_utime / ticks_seg);
+  printf("SYS TIME:       %4.2fs\n", (double) t.tms_stime / ticks_seg);
+
+  return bytes_written;
 }
 
 int llread(int fd, uint8_t *buffer)

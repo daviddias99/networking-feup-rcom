@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <signal.h>
+#include <sys/times.h>
 #include "../util/log.h"
 
 #define RECEIVER    0               // serial port receiver-id
