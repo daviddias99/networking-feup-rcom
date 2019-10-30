@@ -24,17 +24,48 @@ typedef enum receiver_state {
 
 // State-machine representing the receiving of type S or U
 struct receiver_state_machine {
-  receiver_state_t currentState;
-  uint8_t* frame;
-  size_t allocatedMemory;
-  size_t currentByte_idx;
-  bool connectionEstablished;
+  receiver_state_t currentState;    // current state of the machine
+  uint8_t* frame;                   // frame storage
+  size_t allocatedMemory;           // bytes allocated to the frame storage
+  size_t currentByte_idx;           // current index of the place where the next received byte shall be written
+  bool connectionEstablished;       // true if the connection as been established, false otherwise
 };
 
+
+/**
+ * @brief Allocated necessary memmory and initializes the fields of a new state machine
+ * 
+ * @return struct receiver_state_machine* pointer to a new state machine
+ */
 struct receiver_state_machine* create_rcv_state_machine();
+
+/**
+ * @brief Resets the values of the state machine
+ * 
+ * @param st_machine  state machine to reset
+ */
 void reset_rcv_state_machine(struct receiver_state_machine* st_machine);
+
+/**
+ * @brief Frees allocated memory for the state machine
+ * 
+ * @param st_machine  state machine to destroy
+ */
 void destroy_rcv_state_machine(struct receiver_state_machine* st_machine);
+
+/**
+ * @brief Processes a byte. Alters the internal state of the STM
+ * 
+ * @param st_machine            state-machine that processed the byte
+ * @param received_byte         byte to process
+ */
 void sm_processInput(struct receiver_state_machine *st_machine, uint8_t received_byte);
+
+/**
+ * @brief Sets the logging file for the state machine
+ * 
+ * @param fp                    file pointer of the log file
+ */ 
 void rcv_stm_set_log_fp(FILE* fp);
 
 #endif
