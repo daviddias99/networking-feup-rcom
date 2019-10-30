@@ -488,10 +488,10 @@ int llwrite(int fd, uint8_t *buffer, int length)
 
   end = times(&t);
 
-  printf("BYTES:          %d\n", length);
+  printf("\nBYTES:          %d\n", length);
   printf("CLOCK:          %4.2fs\n", (double) (end - start) / ticks_seg);
   printf("USER TIME:      %4.2fs\n", (double) t.tms_utime / ticks_seg);
-  printf("SYS TIME:       %4.2fs\n", (double) t.tms_stime / ticks_seg);
+  printf("SYS TIME:       %4.2fs\n\n", (double) t.tms_stime / ticks_seg);
 
   return bytes_written;
 }
