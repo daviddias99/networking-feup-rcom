@@ -1,8 +1,5 @@
-#include <string.h>
 
 #include "./app_receive.h"
-#include "./app.h"
-#include "./tlv.h"
 
 static FILE* log_fp = NULL;
 
@@ -31,13 +28,6 @@ int receive_file(int port) {
 
 
     FILE* file_ptr = fopen(start_info->file_name, "wb");
-    /*
-    int file_fd = open(start_info->file_name, O_CREAT | O_WRONLY);
-    if (file_fd == -1) {
-        perror("Unable to create file\n");
-        exit(1);
-    }
-    */
 
     size_t progress = 0;
     while ((bytes_read = llread(port_fd, packet)) > 0) {

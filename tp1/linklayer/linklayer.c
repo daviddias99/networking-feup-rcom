@@ -3,18 +3,114 @@
 #include "receiver_state_machine.h"
 #include "transmitter_state_machine.h"
 
+/**
+ * @brief Opens the serial port for reading and writting and stores the old serial port configuration
+ * 
+ * @param port            integer identification of the serial port to be opened
+ * @return int            file descriptor of the opened port (-1 if error)
+ */
 static int serial_port_setup(int port);
 
+/**
+ * @brief Opens a connection with a receiver by sending a SET message and waiting for a UA
+ * 
+ * @param fd              integer identification of the serial port to be opened
+ * @return int            zero upon sucess, non-0 otherwise
+ */
 static int transmitter_open(int fd);
+
+/**
+ * @brief Opens a connection by waiting for a SET message from a transmitter
+ * 
+ * @param fd              integer identification of the serial port to be opened
+ * @return int            zero upon sucess, non-0 otherwise
+ */
 static int receiver_open(int fd);
+
+/**
+ * @brief Closes an open connection by sending a DISC message, waiting for a DISC response from the receiver and sending a UA back
+ * 
+ * @param fd              integer identification of the serial port to be closed
+ * @return int            zero upon sucess, non-0 otherwise
+ */
 static int transmitter_close(int fd);
+
+/**
+ * @brief Closes an open connection by waiting for a DISC message from the transmitter, sending  a DISC response and receiving a UA back
+ * 
+ * @param fd              integer identification of the serial port to be closed
+ * @return int            zero upon sucess, non-0 otherwise
+ */
 static int receiver_close(int fd);
+
+/**
+ * @brief 
+ * 
+ * @param fd 
+ * @param type 
+ * @param buffer 
+ * @param length 
+ * @return int 
+ */
 static int write_frame(int fd, int type, uint8_t *buffer, size_t length);
+
+/**
+ * @brief 
+ * 
+ * @param fd 
+ * @param buffer 
+ * @param length 
+ * @return int 
+ */
 static int write_data(int fd, uint8_t *buffer, int length);
+
+/**
+ * @brief Send a unnumbered acknowledgement to the connected partner
+ * 
+ * @param fd              file descriptor of the serial port where the UA should be sent to
+ * @return int            zero upon success, non-zero otherwise
+ */
 static int sendUA(int fd);
+
+/**
+ * @brief Send a positive or negative acknowledgement to the connected partner
+ * 
+ * @param fd              file descriptor of the serial port where the UA should be sent to
+ * @param type            true if ACK, false if NACK
+ * @param sequence_no     sequence number to be associated with the acknowledgement (0 or 1)
+ * @return int            zero upon success, non-zero otherwise
+ */
 static int sendAck(int fd,bool type, int sequence_no);
+
+
+/**
+ * @brief Checks if the data bcc of a type-I frame is correct
+ * 
+ * @param frame           type-I frame
+ * @param frame_size      size of the frame
+ * @return true           the data bcc of the frame is valid
+ * @return false          the data bcc of the frame is not valid
+ */
 static bool valid_data_bcc(uint8_t frame[], size_t frame_size);
+
+/**
+ * @brief Build a S/U type frame with the given parameters
+ * 
+ * @param buf             buffer where the frame must be built
+ * @param address         address field of the frame
+ * @param control         control field of the frame
+ */
 static void build_su_frame(uint8_t *buf, int address, int control);
+
+/**
+ * @brief 
+ * 
+ * @param fd 
+ * @param frame 
+ * @param frame_size 
+ * @param buffer 
+ * @return int 
+ */
 static int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, uint8_t *buffer);
 static int process_read_su_frame(int fd, uint8_t frame[]);
 static void alarm_handler(int signo);
@@ -366,6 +462,10 @@ int write_data(int fd, uint8_t *buffer, int length)
 
 int llwrite(int fd, uint8_t *buffer, int length)
 {
+
+    if(!connection_info.connectionEstablished)
+      return -1;
+
   return write_frame(fd, DATA, buffer, length);
 }
 
@@ -373,6 +473,9 @@ int llread(int fd, uint8_t *buffer)
 {
 
   int res;
+
+  if(!connection_info.connectionEstablished)
+    return -1;
 
   // Initialize the received frame processing state-machine
   reset_rcv_state_machine(connection_info.rcv_st_machine);

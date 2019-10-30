@@ -6,17 +6,10 @@
 
 FILE* log_fp = NULL;
 
-int get_file_path_from_user(char* path){
-
-    printf("File path : ");
-    fflush(stdout);
-    fgets(path, 255, stdin);
-    log_debug(log_fp,"APP_T: Read path(%s) from user", path);
-    path[strlen(path) - 1] = '\0';
-
-    return 0;
-}
-
+/**
+ * @brief Initiates the files need for app layer logging purposes (does the same for app layer segments)
+ * 
+ */
 void init_logging(){
 
   log_fp = fopen("app_log.txt","w");
@@ -26,6 +19,7 @@ void init_logging(){
 
 int main(int argc, char const *argv[]) {
 
+    // Init the file used for the app layer logging (this call is part of the logging process and does not affect the program)
     init_logging();
 
     if (argc < 3) {
@@ -33,8 +27,8 @@ int main(int argc, char const *argv[]) {
       exit(1);
     }
 
-    bool role;
-    int port;
+    bool role;          // false if receiver, true if transmitter
+    int port;           // serial port (ex: port=1 opens /dev/ttyS1)
 
     if (strcmp(argv[1],"receiver") == 0) {
         role = false;
@@ -46,11 +40,14 @@ int main(int argc, char const *argv[]) {
         exit(2);
     }
     
+    // Extract user arguments and call the correct function
+
     port = atoi(argv[1]);
 
     if (role)  { 
         int packet_size;
         char* path;
+        
         
         if (argc != 5) {
             printf("Usage:\t%s transmitter [port] [path] [packet_size]\n", argv[0]);
@@ -63,68 +60,17 @@ int main(int argc, char const *argv[]) {
 
         path = malloc(strlen(argv[3]) * sizeof(char));
         path = strcpy(path, argv[3]);
+
+        // send file to receiver
         send_file(port, path, packet_size);
         free(path);
     }
     else {
+
+        // receive file from transmtiter
         receive_file(port);
     }
 
-    
     return 0;
 }
 
-void log_control_packet(uint8_t* packet, uint8_t packet_size) {
-
-    printf("-- CONTROL PACKET -- \n");
-    printf("type: %d\n", packet[0]);
-
-    uint8_t i = 1;
-    uint8_t parameter_number = 0;
-    while (i < packet_size) {
-        printf("parameter number : %d\n", parameter_number);
-        printf("    type : %d\n", packet[i]);
-        i++;
-        uint8_t length = packet[i];
-        printf("    length : %d\n", length);
-        i++;
-        printf("    value :");
-        for (uint8_t j = 0; j < length; j++) {
-            printf(" %x", packet[i + j]);
-        }
-        printf("\n");
-        i += length;
-    }
-}
-
-void log_data_packet(uint8_t* packet) {
-    printf("-- DATA PACKET -- \n");
-    printf("control : %d\n", packet[0]);
-    printf("sequence number : %d\n", packet[1]);
-
-    size_t length = 256 * packet[2] + packet[3];
-    printf("size : 256 * %d + %d = %ld\n", packet[2], packet[3], length);
-
-    printf("data :");
-    for (size_t i = 0; i < length; i++)
-        printf(" %x", packet[4 + i]);
-    printf("\n");
-}
-
-
-void progress_bar(const char* prefix, size_t count, size_t max_count) {
-
-    int progress = count * 100 / max_count;
-    
-    fflush(stdout);
-    printf("\r%s : %3d%% [", prefix, progress);
-
-    for (uint8_t i = 0; i < progress; i++)
-        printf("#");
-    for (uint8_t i = progress; i < 100; i++)
-        printf(" ");
-    printf("]"); 
-
-	if (progress == 100)
-		printf("\n");
-}

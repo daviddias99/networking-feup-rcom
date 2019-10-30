@@ -1,7 +1,5 @@
 #include "./app_send.h"
 
-// FIXME: review code and use const in the defined functions
-
 static FILE* log_fp = NULL;
 
 void app_snd_set_log_fp(FILE* fp){

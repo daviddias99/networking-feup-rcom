@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <string.h>
 
-
 typedef enum data_type {
     FILE_SIZE = 0,
     FILE_NAME
