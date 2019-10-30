@@ -103,37 +103,54 @@ static bool valid_data_bcc(uint8_t frame[], size_t frame_size);
 static void build_su_frame(uint8_t *buf, int address, int control);
 
 /**
- * @brief 
+ * @brief Processed a given I-type frame and issues the appropriate response (AKC OR NACK)
  * 
- * @param fd 
- * @param frame 
- * @param frame_size 
- * @param buffer 
- * @return int 
+ * @param fd              file descriptor of the serial port where the response should be sent to
+ * @param frame           type-I frame
+ * @param frame_size      number of bytes of the frame
+ * @param buffer          data extracted from the frame
+ * @return int            number of data bytes read or -1 in case of error
  */
 static int process_read_i_frame(int fd, uint8_t frame[], size_t frame_size, uint8_t *buffer);
+
+/**
+ * @brief Processed a given S/U-type frame and issues the appropriate response (UA OR none)
+ * 
+ * @param fd              file descriptor of the serial port where the response should be sent to
+ * @param frame           type-S/U frame
+ * @return int            zero upon sucess, non-zero otherwise
+ */
 static int process_read_su_frame(int fd, uint8_t frame[]);
+
 static void alarm_handler(int signo);
 
+/**
+ * @brief Inits the linklayer logging system
+ * 
+ */
 static void init_logging();
 
+/**
+ * @brief Struct that stores the settings and current status of the linklayer
+ * 
+ */
 typedef struct linklayer
 {
 
-  char port[20];
-  int baudRate;
-  unsigned int sequenceNumber;
-  int role;
-  bool connectionEstablished;
-  struct receiver_state_machine * rcv_st_machine;
+  char port[20];                                      /*path of the serial port*/
+  int baudRate;                                       /*baudrate*/
+  unsigned int sequenceNumber;                        /*sequence number of last read valid frame*/
+  int role;                                           /*0 for receiver 1 for transmitter*/
+  bool connectionEstablished;                         /*true if the connection as been established, false otherwise*/
+  struct receiver_state_machine * rcv_st_machine;     /*receiver frame processing state machine*/
 
 } linklayer_info;
 
 linklayer_info connection_info;
 
-static struct termios oldtio; // Starting serial port settings (set after successful serial_port_setup)
-int timedOut = 1, numTries = 1;
-static FILE *log_fp = NULL;
+static struct termios oldtio;     // Starting serial port settings (set after successful serial_port_setup)
+int timedOut = 1, numTries = 1;   // timeout flag and retry counter
+static FILE *log_fp = NULL;       // logging file
 
 static void alarm_handler(int signo)
 {

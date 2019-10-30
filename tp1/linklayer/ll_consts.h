@@ -1,12 +1,11 @@
 
 // General Settings
-#define BAUDRATE B9600
+#define BAUDRATE                    B9600   // baudrate used by the serial port            
+#define MAX_TIMEOUT_RETRY_CNT       3       // Number of timeouts for sending data to the partner that cause the ll functions to return uncessfully
+#define VTIME_VALUE                 20      // VMIN value for the configuration of the serial port (ms before the timeout) 
+#define VMIN_VALUE                  1       // VMIN value for the configuration of the serial port (min number of bytes read before read return)
+#define PORT_PATH_LENGTH            11      // Max length of the port path
 #define LOG_FILE                    "ll_log.txt"
-#define MAX_TIMEOUT_RETRY_CNT       3   // Number of timeouts for sending data to the partner that cause the ll functions to return uncessfully
-#define I_FRAME_SIZE                255
-#define VTIME_VALUE                 20
-#define VMIN_VALUE                  1
-#define PORT_PATH_LENGTH            11
 
 // Frame header indices (S/U/I) - Note: S/U frames don't have data
 #define FLAG_START_INDEX            0   // Starting delimiter flag byte
@@ -31,16 +30,16 @@
 #define CONTROL_RR_BASE             0x05  // receiver ready / positive acknowledgment
 #define CONTROL_REJ_BASE            0x01  // reject / negative acknowledgment
 
-#define ESC	                        0x7d  
-#define ESC_XOR                     0x20
+#define ESC	                        0x7d  // escape char  
+#define ESC_XOR                     0x20  // escape char xor
 
 #define BIT(n)                      (0x01<<(n))
 
-#define I_FRAME_START_SIZE  256
+#define I_FRAME_START_SIZE  256          // starting size of the the I-type frame
 
 
-#define DATA                        0
-#define CLOSE                       1
-#define OPEN                        2
+#define DATA                        0       // Data frame type ID
+#define CLOSE                       1       // Close frame type ID
+#define OPEN                        2       // Open frame type ID
 
 #define UNUSED(expr) (void)(expr);
