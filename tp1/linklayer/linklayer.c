@@ -141,7 +141,6 @@ typedef struct linklayer
   int baudRate;                                       /*baudrate*/
   unsigned int sequenceNumber;                        /*sequence number of last read valid frame*/
   int role;                                           /*0 for receiver 1 for transmitter*/
-  bool connectionEstablished;                         /*true if the connection as been established, false otherwise*/
   struct receiver_state_machine * rcv_st_machine;     /*receiver frame processing state machine*/
 
 } linklayer_info;
@@ -363,7 +362,7 @@ int transmitter_open(int fd)
   build_su_frame(frame, ADDR_TRANSM_COMMAND, CONTROL_SET);
 
   // Linklayer connection info initial values
-  connection_info.connectionEstablished = false;
+  connection_info.rcv_st_machine->connectionEstablished = false;
   connection_info.sequenceNumber = 0;
 
   // Write SU-Open frame
@@ -480,7 +479,7 @@ int write_data(int fd, uint8_t *buffer, int length)
 int llwrite(int fd, uint8_t *buffer, int length)
 {
 
-    if(!connection_info.connectionEstablished)
+    if(!connection_info.rcv_st_machine->connectionEstablished)
       return -1;
 
   return write_frame(fd, DATA, buffer, length);
@@ -491,7 +490,7 @@ int llread(int fd, uint8_t *buffer)
 
   int res;
 
-  if(!connection_info.connectionEstablished)
+  if(!connection_info.rcv_st_machine->connectionEstablished)
     return -1;
 
   // Initialize the received frame processing state-machine
