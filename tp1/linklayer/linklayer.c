@@ -362,7 +362,7 @@ int transmitter_open(int fd)
   build_su_frame(frame, ADDR_TRANSM_COMMAND, CONTROL_SET);
 
   // Linklayer connection info initial values
-  connection_info.rcv_st_machine->connectionEstablished = false;
+  connection_info.rcv_st_machine = create_rcv_state_machine();
   connection_info.sequenceNumber = 0;
 
   // Write SU-Open frame
