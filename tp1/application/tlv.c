@@ -83,11 +83,9 @@ void print_tlv(tlv* tlv_ptr) {
 
 
 void int_to_array(int integer, uint8_t* array) {
-
     *(int*)array = integer;
 }
 
 int array_to_int(uint8_t* array) {
-
-    return *(int*)array;;
+    return *(int*)array;
 }

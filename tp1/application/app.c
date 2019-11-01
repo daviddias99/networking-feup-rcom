@@ -4,14 +4,17 @@
 #include "./app_receive.h"
 
 
+/**
+ * @brief Pointer to the log file
+ * 
+ */
 FILE* log_fp = NULL;
 
 /**
- * @brief Initiates the files need for app layer logging purposes (does the same for app layer segments)
+ * @brief Initiates the files needed for app layer logging purposes (does the same for app layer segments)
  * 
  */
 void init_logging(){
-
   log_fp = fopen("app_log.txt","w");
   app_snd_set_log_fp(log_fp);
   app_rcv_set_log_fp(log_fp);
