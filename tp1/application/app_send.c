@@ -97,7 +97,6 @@ int send_file(int port, char* file_path, size_t packet_size) {
         progress_bar("Sending file", progress, file_st.st_size);
     }
 
-    // TODO: why was this tagged as FIXME?
     if (bytes_read == -1){
         perror("Error while reading the file \n");
         exit(1);
