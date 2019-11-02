@@ -1,5 +1,6 @@
 #include <stdbool.h>
 
+#include "./app.h"
 #include "./app_send.h"
 #include "./app_receive.h"
 
@@ -20,7 +21,7 @@ void init_logging(){
   app_rcv_set_log_fp(log_fp);
 }
 
-int main(int argc, char const *argv[]) {
+int app(int argc, const char *argv[]) {
 
     // Init the file used for the app layer logging (this call is part of the logging process and does not affect the program)
     init_logging();
