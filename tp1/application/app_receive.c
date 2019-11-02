@@ -1,4 +1,3 @@
-
 #include "./app_receive.h"
 
 static FILE* log_fp = NULL;
@@ -9,12 +8,16 @@ void app_rcv_set_log_fp(FILE* fp){
 
 int receive_file(int port) {
 
+    // open the serial port
+    log_debug(log_fp, "APP_R: Establishing communication");
     int port_fd = llopen(port, RECEIVER);
     printf("port fd : %d\n", port_fd);
     if (port_fd < 0) {
         printf("No communication established\n");
         exit(1);
     }
+
+    log_debug(log_fp, "APP_R: Communitcation established");
 
     uint8_t packet[2000];
     int bytes_read = llread(port_fd, packet);
@@ -24,26 +27,30 @@ int receive_file(int port) {
         exit(1);
     }
 
+    log_debug(log_fp, "APP_R: START packet read");
+
     control_info* start_info = create_control_info(packet, bytes_read);
 
+    log_debug(log_fp, "APP_R: Receiving file(%s, %d)...", start_info->file_name, start_info->file_size);
 
     FILE* file_ptr = fopen(start_info->file_name, "wb");
 
     size_t progress = 0;
     while ((bytes_read = llread(port_fd, packet)) > 0) {
 
+
         if (packet[0] == END) {
+            log_debug(log_fp, "APP_R: END packet read");
             break;
         }
         else if (packet[0] != DATA) {
             printf("Found unexpected type : %d\n\n", packet[0]);
-
-
             exit(1);
         }
 
+        log_debug(log_fp, "APP_R: DATA packet read (%d bytes read)", bytes_read);
         fwrite(packet + 4, 1, bytes_read - 4, file_ptr);
-        //write(file_fd, packet + 4, bytes_read - 4);
+        log_debug(log_fp, "APP_R: %d bytes writen to file(%s)", bytes_read - 4, start_info->file_name);
 
         progress += bytes_read - 4;
         progress_bar("Receiving file", progress, start_info->file_size);
@@ -60,8 +67,6 @@ int receive_file(int port) {
     if (compare_control_info(start_info, end_info) == 0) {
         printf("Start and end packets carried different information\n");
     }
-
-    // TODO: check if the written file as the same size as the one on the control packets
 
     destroy_control_info(start_info);
     destroy_control_info(end_info);
