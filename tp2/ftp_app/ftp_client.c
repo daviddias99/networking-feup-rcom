@@ -2,24 +2,153 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <netdb.h> 
+#include <sys/types.h>
+#include <netinet/in.h> 
+#include <arpa/inet.h>
+
+#include <sys/socket.h>
+
+#include <ctype.h>
+#include <unistd.h>
 
 
-typedef struct ftp_url_st {
+#define SERVER_PORT 21
+
+
+struct ftp_st {
+    // ftp://[<user>:<password>@]<host>/<url-path>
     char* user;
     char* password;
     char* host;
     char* url_path;
-} ftp_url;
+};
+
+
+int parse_arguments(char* arg, struct ftp_st* ftp);
+char* get_file_name(char* file_path);
+void read_response(int socket_fd, char* response_code);
+int download_file(int socket_fd, char* file_path);
+int send_command(int socket_fd, char* command, char* command_args, int socket_fd_client);
+int get_server_port(int socket_fd);
+
+int main(int argc, char** argv) {
+
+    if (argc < 2) {
+        perror("Please provide a URL\n");
+        return 1;
+    } else if (argc > 2) {
+        perror("Too many arguments\n");
+        return 1;
+    }
+
+    struct ftp_st ftp;
+    int ret;
+    if ((ret = parse_arguments(argv[1], &ftp)) < 0) {
+        if (ret == -1)
+            perror("Invalid URL format\n");
+        else if (ret == -2)
+            perror("Unable to allocate memory\n");
+
+        // TODO: free ftp
+        exit(1);
+    }
+
+    printf(" - Username : %s\n", ftp.user);
+    printf(" - Password : %s\n", ftp.password);
+    printf(" - Host : %s\n", ftp.host);
+    printf(" - URL Path : %s\n", ftp.url_path);
+
+    struct hostent *h;
+    if ((h = gethostbyname(ftp.host)) == NULL) {  
+        perror("gethostbyname");
+        exit(1);
+    }
+
+    printf(" - IP Address : %s\n",inet_ntoa(*((struct in_addr *)h->h_addr)));
+
+    int socket_fd, socket_fd_client = -1;
+	struct sockaddr_in server_addr, server_addr_client;
+
+    bzero((char *)&server_addr, sizeof(server_addr));
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_addr.s_addr = inet_addr(inet_ntoa(*((struct in_addr *)h->h_addr))); /*32 bit Internet address network byte ordered*/
+	server_addr.sin_port = htons(SERVER_PORT);											/*server TCP port must be network byte ordered */
+
+    // open TCP socket
+	if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		perror("Error opening socket");
+		exit(0);
+	}
+
+    // connect to the server
+	if (connect(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+		perror("Error connecting to server");
+		exit(0);
+	}
+
+    char response_code[3];
+    read_response(socket_fd, response_code);
+
+    // TODO: deal with other cases
+    if (response_code[0] == '2') {
+        printf(" > Connection established\n");
+    }
+
+    printf(" > Sending Username\n");
+    ret = send_command(socket_fd, "user ", ftp.user, socket_fd_client);
+    if (ret) {
+        printf(" > Sending Password\n");
+        ret = send_command(socket_fd, "pass ", ftp.password, socket_fd_client);
+    }
+    
+    // TODO: handle errors
+    if (ret < 0) {
+        exit(1);
+    }
+
+    int server_port = get_server_port(socket_fd);
+    
+    /*server address handling*/
+	bzero((char *)&server_addr_client, sizeof(server_addr_client));
+	server_addr_client.sin_family = AF_INET;
+	server_addr_client.sin_addr.s_addr = inet_addr(inet_ntoa(*((struct in_addr *)h->h_addr))); /*32 bit Internet address network byte ordered*/
+	server_addr_client.sin_port = htons(server_port);										   /*server TCP port must be network byte ordered */
+
+	/*open an TCP socket*/
+	if ((socket_fd_client = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		perror("socket()");
+		exit(0);
+	}
+
+	/*connect to the server*/
+	if (connect(socket_fd_client, (struct sockaddr *)&server_addr_client, sizeof(server_addr_client)) < 0) {
+		perror("connect()");
+		exit(0);
+	}
+
+    printf("\n > Sending RETR\n");
+    ret = send_command(socket_fd, "retr ", ftp.url_path, socket_fd_client);
+
+    if (ret < 0) {
+        printf("Error in RETR response\n");
+        exit(1);
+    }
+
+    // TODO: free ftp
+    exit(0);
+}
+
 
 /**
  * @brief 
  * 
  * @param arg 
  * @param ftp 
- * @return  Returns 0 when successful, returns 1 in case of invalid format,
- *          returns 2 when unable to allocate enough memory
+ * @return  Returns 0 when successful, returns -1 in case of invalid format,
+ *          returns -2 when unable to allocate enough memory
  */
-int parse_arguments(char* arg, ftp_url* ftp) {
+int parse_arguments(char* arg, struct ftp_st* ftp) {
     // ftp://[<user>:<password>@]<host>/<url-path>
     if (strncmp(arg, "ftp://", 6) != 0) {
         perror("Invalid url header\n");
@@ -36,76 +165,248 @@ int parse_arguments(char* arg, ftp_url* ftp) {
         str_len = char_ptr - arg;
         ftp->user = malloc(str_len);
         if (ftp->user == NULL) 
-            return 2;
+            return -2;
         strncpy(ftp->user, arg, str_len);
 
         arg = arg + str_len + 1;
 
         char_ptr = strchr(arg, '@');
         if (char_ptr == NULL)
-            return 1;
+            return -1;
     
         str_len = char_ptr - arg;
         ftp->password = malloc(str_len);
         if (ftp->password == NULL)
-            return 2;
+            return -2;
         strncpy(ftp->password, arg, str_len);
 
         arg = arg + str_len + 1;
     }
     else {
-        ftp->user = NULL;
-        ftp->password = NULL;
+        ftp->user = strdup("anonymous");
+        ftp->password = strdup("anonymous");
     }
 
     char_ptr = strchr(arg, '/');
     if (char_ptr == NULL)
-        return 1;
+        return -1;
     
     str_len = char_ptr - arg;
     ftp->host = malloc(str_len);
     if (ftp->host == NULL)
-        return 2;
+        return -2;
     strncpy(ftp->host, arg, str_len);
     arg += str_len + 1;
 
     
     ftp->url_path = malloc(strlen(arg));
     if (ftp->url_path == NULL)
-        return 2;
+        return -2;
     strcpy(ftp->url_path, arg);
 
     return 0;
 }
 
-int main(int argc, char** argv) {
+char* get_file_name(char* file_path) {
+    char* file_name = file_path;
 
-    if (argc < 2) {
-        perror("Please provide a URL\n");
-        return 1;
-    } else if (argc > 2) {
-        perror("Too many arguments\n");
-        return 1;
+    for (int i = strlen(file_path) - 1; i >= 0; i--) {
+        if (file_path[i] == '/') {
+            file_name = file_path + i + 1;
+            break;
+        }
     }
 
-    ftp_url ftp;
-    int ret;
-    if ((ret = parse_arguments(argv[1], &ftp)) != 0) {
-        if (ret == 1)
-            perror("Invalid URL format\n");
-        if (ret == 2)
-            perror("Unable to allocate memory\n");
-
-        // TODO: free ftp
-        return 1;
-    }
-
-    printf("Username : %s\n", ftp.user);
-    printf("Password : %s\n", ftp.password);
-    printf("Host : %s\n", ftp.host);
-    printf("URL Path : %s\n", ftp.url_path);
-    
-
-    return 0;
+    return file_name;
 }
 
+void read_response(int socket_fd, char* response_code) {
+    int state = 0;
+    size_t index = 0;
+    char read_char;
+
+    while(state != 3) {
+        // TODO: deal with read errors
+        read(socket_fd, &read_char, 1);
+        printf("%c", read_char);
+
+        switch (state) {
+        // reading the response code
+        case 0:
+            if (read_char == ' ') {
+                if (index != 3) {
+                    printf("Error : response code incomplete\n");
+                    return;
+                }
+                index = 0;
+                state = 1;
+            }
+            else if (read_char == '-') {
+                index = 0;
+                state = 2;
+            }
+            else if (isdigit(read_char) && index < 3) {
+                response_code[index] = read_char;
+                index++;
+            }
+            break;
+
+        // read until the end of the line
+        case 1:
+            if (read_char == '\n') {
+                state = 3;
+            }
+            break;
+
+        // wait for response code in multiple line responses
+        case 2:
+            if (read_char == response_code[index]) {
+                index++;
+            }
+            else if (index == 3 && read_char == ' ') {
+                state = 1;
+            }
+            else if (index == 3 && read_char == '-') {
+                index = 0;
+            }
+            break;
+        
+        default:
+            break;
+        }
+
+    }
+}
+
+int download_file(int socket_fd, char* file_path) {
+    char* file_name = get_file_name(file_path);
+
+    FILE *file = fopen(file_name, "wb");
+    char buffer[1000];
+    int bytes;
+    printf("Started downloading file\n");
+    while ((bytes = read(socket_fd, buffer, 1000)) >= 0) {
+        printf("%s\n", buffer);
+        bytes = fwrite(buffer, bytes, 1, file);
+    }
+
+    fclose(file);
+    printf("Finished downloading file\n");
+}
+
+int send_command(int socket_fd, char* command, char* command_args, int socket_fd_client) {
+    char response_code[3];
+    int action = 0;
+
+    // send the command
+    write(socket_fd, command, strlen(command));
+    write(socket_fd, command_args, strlen(command_args));
+    write(socket_fd, "\n", 1);
+
+    while (1) { 
+        read_response(socket_fd, response_code);
+        action = response_code[0] - '0';
+
+        switch (action) {
+            // positive preliminary reply
+            case 1:
+                if (strcmp(command, "retr ") == 0) {
+                    download_file(socket_fd, command_args);
+                    break;
+                }
+                read_response(socket_fd, response_code);
+                break;
+
+            // positive completion reply
+            case 2:
+                return 0;
+
+            // positive intermidiate reply
+            // the command needs additional information
+            case 3:
+                return 1;
+
+            // transient negative completion reply
+            // send the command again
+            case 4:
+                write(socket_fd, command, strlen(command));
+			    write(socket_fd, command_args, strlen(command_args));
+			    write(socket_fd, "\r\n", 2);
+                break;
+
+            // permanent negative completion reply
+            case 5:
+                return -1;
+
+            // protected reply
+            case 6:
+                return -1;
+
+            default:
+                return -1;
+
+        }
+    }
+}
+
+int get_server_port(int socket_fd) {
+
+    write(socket_fd, "pasv\n", 5);
+
+    int state = 0;
+    int index = 0;
+
+    char first_byte[4], second_byte[4];
+    char read_char;
+
+    while (state != 7) {
+        read(socket_fd, &read_char, 1);
+        printf("%c", read_char);
+
+        switch (state) {
+
+            case 0:
+                if (read_char == ' ') {
+                    if (index != 3) {
+                        printf("Error receiving response code");
+                        return -1;
+                    }
+                    index = 0;
+                    state = 1;
+                }
+                else {
+                    index++;
+                }
+                break;
+
+            case 5:
+                if (read_char == ',') {
+                    index = 0;
+                    state = 6;
+                }
+                else {
+                    first_byte[index] = read_char;
+                    index++;
+                }
+                break;
+            
+            case 6:
+                if (read_char == ')') {
+                    state++;
+                }
+                else {
+                    second_byte[index] = read_char;
+                    index++;
+                }
+                break;
+            
+            default:
+                if (read_char == ',') {
+                    state++;
+                }
+                break;
+        }
+    }
+
+    return atoi(first_byte) * 256 + atoi(second_byte);
+}
