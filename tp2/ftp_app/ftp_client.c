@@ -12,6 +12,8 @@
 #include <ctype.h>
 #include <unistd.h>
 
+#include <sys/stat.h>
+
 
 #define SERVER_PORT 21
 
@@ -127,7 +129,7 @@ int main(int argc, char** argv) {
 		exit(0);
 	}
 
-    printf("\n > Sending RETR\n");
+    // printf("\n > Sending RETR\n");
     ret = send_command(socket_fd, "retr ", ftp.url_path, socket_fd_client);
 
     if (ret < 0) {
@@ -274,24 +276,20 @@ void read_response(int socket_fd, char* response_code) {
         default:
             break;
         }
-
     }
 }
 
 int download_file(int socket_fd, char* file_path) {
     char* file_name = get_file_name(file_path);
 
-    FILE *file = fopen(file_name, "wb");
+    FILE *file = fopen(file_name, "wb+");
     char buffer[1000];
     int bytes;
-    printf("Started downloading file\n");
-    while ((bytes = read(socket_fd, buffer, 1000)) >= 0) {
-        printf("%s\n", buffer);
+    while ((bytes = read(socket_fd, buffer, 1000)) > 0) {
         bytes = fwrite(buffer, bytes, 1, file);
     }
 
     fclose(file);
-    printf("Finished downloading file\n");
 }
 
 int send_command(int socket_fd, char* command, char* command_args, int socket_fd_client) {
@@ -311,7 +309,7 @@ int send_command(int socket_fd, char* command, char* command_args, int socket_fd
             // positive preliminary reply
             case 1:
                 if (strcmp(command, "retr ") == 0) {
-                    download_file(socket_fd, command_args);
+                    download_file(socket_fd_client, command_args);
                     break;
                 }
                 read_response(socket_fd, response_code);
@@ -344,7 +342,6 @@ int send_command(int socket_fd, char* command, char* command_args, int socket_fd
 
             default:
                 return -1;
-
         }
     }
 }
