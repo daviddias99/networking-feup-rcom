@@ -26,9 +26,12 @@ struct ftp_st {
     char* url_path;
 };
 
+char response[255];
+size_t response_index = 0;
 
 int parse_arguments(char* arg, struct ftp_st* ftp);
 char* get_file_name(char* file_path);
+int get_file_size();
 void read_response(int socket_fd, char* response_code);
 int download_file(int socket_fd, char* file_path);
 int send_command(int socket_fd, char* command, char* command_args, int socket_fd_client);
@@ -37,10 +40,10 @@ int get_server_port(int socket_fd);
 int main(int argc, char** argv) {
 
     if (argc < 2) {
-        perror("Please provide a URL\n");
+        perror(" > Please provide a URL\n");
         return 1;
     } else if (argc > 2) {
-        perror("Too many arguments\n");
+        perror(" > Too many arguments\n");
         return 1;
     }
 
@@ -48,9 +51,9 @@ int main(int argc, char** argv) {
     int ret;
     if ((ret = parse_arguments(argv[1], &ftp)) < 0) {
         if (ret == -1)
-            perror("Invalid URL format\n");
+            perror(" > Invalid URL format\n");
         else if (ret == -2)
-            perror("Unable to allocate memory\n");
+            perror(" > Unable to allocate memory\n");
 
         // TODO: free ftp
         exit(1);
@@ -63,7 +66,7 @@ int main(int argc, char** argv) {
 
     struct hostent *h;
     if ((h = gethostbyname(ftp.host)) == NULL) {  
-        perror("gethostbyname");
+        perror(" > gethostbyname");
         exit(1);
     }
 
@@ -79,13 +82,13 @@ int main(int argc, char** argv) {
 
     // open TCP socket
 	if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("Error opening socket");
+		perror(" > Error opening socket");
 		exit(0);
 	}
 
     // connect to the server
 	if (connect(socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-		perror("Error connecting to server");
+		perror(" > Error connecting to server");
 		exit(0);
 	}
 
@@ -119,13 +122,13 @@ int main(int argc, char** argv) {
 
 	/*open an TCP socket*/
 	if ((socket_fd_client = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("socket()");
+		perror(" > socket()");
 		exit(0);
 	}
 
 	/*connect to the server*/
 	if (connect(socket_fd_client, (struct sockaddr *)&server_addr_client, sizeof(server_addr_client)) < 0) {
-		perror("connect()");
+		perror(" > connect()");
 		exit(0);
 	}
 
@@ -133,7 +136,7 @@ int main(int argc, char** argv) {
     ret = send_command(socket_fd, "retr ", ftp.url_path, socket_fd_client);
 
     if (ret < 0) {
-        printf("Error in RETR response\n");
+        printf(" > Error in RETR response\n");
         exit(1);
     }
 
@@ -153,7 +156,7 @@ int main(int argc, char** argv) {
 int parse_arguments(char* arg, struct ftp_st* ftp) {
     // ftp://[<user>:<password>@]<host>/<url-path>
     if (strncmp(arg, "ftp://", 6) != 0) {
-        perror("Invalid url header\n");
+        perror(" > Invalid URL header\n");
         return 1;
     }
     
@@ -209,19 +212,6 @@ int parse_arguments(char* arg, struct ftp_st* ftp) {
     return 0;
 }
 
-char* get_file_name(char* file_path) {
-    char* file_name = file_path;
-
-    for (int i = strlen(file_path) - 1; i >= 0; i--) {
-        if (file_path[i] == '/') {
-            file_name = file_path + i + 1;
-            break;
-        }
-    }
-
-    return file_name;
-}
-
 void read_response(int socket_fd, char* response_code) {
     int state = 0;
     size_t index = 0;
@@ -231,13 +221,14 @@ void read_response(int socket_fd, char* response_code) {
         // TODO: deal with read errors
         read(socket_fd, &read_char, 1);
         printf("%c", read_char);
+        response[response_index++] = read_char;
 
         switch (state) {
         // reading the response code
         case 0:
             if (read_char == ' ') {
                 if (index != 3) {
-                    printf("Error : response code incomplete\n");
+                    printf(" > Error : response code incomplete\n");
                     return;
                 }
                 index = 0;
@@ -277,16 +268,62 @@ void read_response(int socket_fd, char* response_code) {
             break;
         }
     }
+
+    response[response_index] = '\0';
+    response_index = 0;
+}
+
+char* get_file_name(char* file_path) {
+    char* file_name = file_path;
+
+    for (int i = strlen(file_path) - 1; i >= 0; i--) {
+        if (file_path[i] == '/') {
+            file_name = file_path + i + 1;
+            break;
+        }
+    }
+
+    return file_name;
+}
+
+int get_file_size() {
+    char* start = strchr(response, '(');
+    char* end = strchr(start, ' ');
+    int size = end - start;
+    char* str = strndup(start + 1, size);
+    size = atoi(str);
+    free(str);
+    return size;
+}
+
+void progress_bar(const char* prefix, size_t count, size_t max_count) {
+
+    int progress = count * 100 / max_count;
+    
+    fflush(stdout);
+    printf("\r%s : %3d%% [", prefix, progress);
+
+    for (uint8_t i = 0; i < progress; i++)
+        printf("#");
+    for (uint8_t i = progress; i < 100; i++)
+        printf(" ");
+    printf("]"); 
+
+	if (progress == 100)
+		printf("\n");
 }
 
 int download_file(int socket_fd, char* file_path) {
     char* file_name = get_file_name(file_path);
+    int file_size = get_file_size();
 
     FILE *file = fopen(file_name, "wb+");
     char buffer[1000];
-    int bytes;
+    int bytes, progress = 0;
     while ((bytes = read(socket_fd, buffer, 1000)) > 0) {
-        bytes = fwrite(buffer, bytes, 1, file);
+        fwrite(buffer, bytes, 1, file);
+        progress += bytes;
+        progress_bar(file_name, progress, file_size);
     }
 
     fclose(file);
@@ -365,7 +402,7 @@ int get_server_port(int socket_fd) {
             case 0:
                 if (read_char == ' ') {
                     if (index != 3) {
-                        printf("Error receiving response code");
+                        printf(" > Error receiving response code");
                         return -1;
                     }
                     index = 0;
