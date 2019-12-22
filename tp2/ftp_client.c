@@ -17,6 +17,11 @@
 
 #define SERVER_PORT 21
 
+/*
+speedtest.tele2.net
+www.wftpserver.com/onlinedemo.htm
+*/
+
 
 struct ftp_st {
     // ftp://[<user>:<password>@]<host>/<url-path>
@@ -29,6 +34,9 @@ struct ftp_st {
 char response[255];
 size_t response_index = 0;
 
+struct ftp_st ftp;
+
+
 int parse_arguments(char* arg, struct ftp_st* ftp);
 char* get_file_name(char* file_path);
 int get_file_size();
@@ -36,6 +44,7 @@ void read_response(int socket_fd, char* response_code);
 int download_file(int socket_fd, char* file_path);
 int send_command(int socket_fd, char* command, char* command_args, int socket_fd_client);
 int get_server_port(int socket_fd);
+void free_ftp();
 
 int main(int argc, char** argv) {
 
@@ -47,7 +56,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    struct ftp_st ftp;
+    atexit(free_ftp);
     int ret;
     if ((ret = parse_arguments(argv[1], &ftp)) < 0) {
         if (ret == -1)
@@ -55,7 +64,6 @@ int main(int argc, char** argv) {
         else if (ret == -2)
             perror(" > Unable to allocate memory\n");
 
-        // TODO: free ftp
         exit(1);
     }
 
@@ -70,7 +78,7 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
-    printf(" - IP Address : %s\n",inet_ntoa(*((struct in_addr *)h->h_addr)));
+    printf(" - IP Address : %s\n\n",inet_ntoa(*((struct in_addr *)h->h_addr)));
 
     int socket_fd, socket_fd_client = -1;
 	struct sockaddr_in server_addr, server_addr_client;
@@ -95,15 +103,14 @@ int main(int argc, char** argv) {
     char response_code[3];
     read_response(socket_fd, response_code);
 
-    // TODO: deal with other cases
     if (response_code[0] == '2') {
         printf(" > Connection established\n");
     }
 
-    printf(" > Sending Username\n");
+    printf("\n > Sending Username\n");
     ret = send_command(socket_fd, "user ", ftp.user, socket_fd_client);
     if (ret) {
-        printf(" > Sending Password\n");
+        printf(" > Sending Password\n\n");
         ret = send_command(socket_fd, "pass ", ftp.password, socket_fd_client);
     }
     
@@ -134,15 +141,33 @@ int main(int argc, char** argv) {
 
     // printf("\n > Sending RETR\n");
     ret = send_command(socket_fd, "retr ", ftp.url_path, socket_fd_client);
-
     if (ret < 0) {
         printf(" > Error in RETR response\n");
+        close(socket_fd_client);
+        close(socket_fd);
         exit(1);
     }
 
-    // TODO: free ftp
+    ret = send_command(socket_fd, "quit", "", socket_fd_client);
+    if (ret < 0) {
+        printf(" > Error in QUIT response\n");
+        close(socket_fd_client);
+        close(socket_fd);
+        exit(1);
+    }
+
+    close(socket_fd_client);
+    close(socket_fd);
     exit(0);
 }
+
+void free_ftp() {
+    free(ftp.host);
+    free(ftp.password);
+    free(ftp.url_path);
+    free(ftp.user);
+}
+
 
 
 /**
