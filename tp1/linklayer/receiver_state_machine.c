@@ -143,7 +143,6 @@ void sm_i_c_rcv_st_handler(struct receiver_state_machine *st_machine, uint8_t re
 void sm_i_data_rcv_st_handler(struct receiver_state_machine *st_machine, uint8_t receivedByte)
 { 
 
-  // TODO: Change this limit
   if(st_machine->currentByte_idx == st_machine->allocatedMemory){
 
     st_machine->allocatedMemory *= 2;

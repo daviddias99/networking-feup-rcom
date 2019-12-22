@@ -42,7 +42,7 @@ int llwrite(int fd, uint8_t * buffer, int length);
  * 
  * @param fd            file descriptor of the serial port
  * @param buffer        byte buffer where the read bytes will be stored
- * @return int          number of bytes read or -1 upon error (not oppening the connection previously for example)
+ * @return int          number of bytes read or -1 upon error (not oppening the connection previously for example). Returns 0 if port closed after establishing.
  */
 int llread(int fd, uint8_t * buffer);
 
