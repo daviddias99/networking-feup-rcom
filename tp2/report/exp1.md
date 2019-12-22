@@ -17,4 +17,4 @@ Conhecendo agora o endereço MAC do tux64, os pacotes gerados pelo comando ping 
 
 A interface loopback é uma interface de rede virtual qm que as mensagens enviadas para esta interface são recebidas pela máquina que as enviou. Esta interface pode ser útil para efeitos de teste, bem como para ser cliente de um servidor da própria máquina.
 
-FALTA RESPONDER À PERGUNTA DO SIZE
+TODO: RESPONDER À PERGUNTA DO SIZE

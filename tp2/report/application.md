@@ -1,11 +1,9 @@
-# Relatório
-
-## Aplicação
+### Aplicação
 A aplicação aceita como argumento um endereço de um ficheiro presente num servidor FTP no seguinte formato:`ftp://[<user>:<password>@]<host>/<url-path>`.
 E descarrega esse mesmo ficheiro (qualquer tipo de ficheiro pode ser descarregado). Todas as respostas do servidor são impressas na consola, assim como uma barra de progresso para que o utilizador saiba em qualquer momento o estado do programa.
 Durante o desenvolvimento da aplicação foram consultados o RFC959, referente ao protocolo de transferência de dados e o RFC1738, referente ao tratamento de informação proveniente de URLs.
 
-### Arquitetura
+#### Arquitetura
 Inicialmente é feito o processamento do url fornecido, de forma a assegurar que se encontra com o formato correto, a função responsável por esta tarefa é denominada de `parse_arguments`. E a informação extraída é colocada na seguinte estrutura:
 ````c
 struct ftp_st {
@@ -24,5 +22,5 @@ No final da execução é enviado o comando `QUIT` para o servidor e após a rec
 
 Uma das principais funções é a `send_command` que envia um comando para o servidor e interpreta a resposta através da função `read_response`. Através do primeiro digito recebido é possível saber se a resposta é positiva (1, 2, 3) ou negativa (4 e 5). No caso de ser 1 o `read_response` é chamado novamente para ler a resposta seguinte, caso seja 2 ou 3 retorna, caso seja 4 tenta ler a resposta novamente e caso seja 5 termina a execução do programa.
 
-### Relatório de um download bem sucedido
-imagem que está no messenger
+#### Relatório de um download bem sucedido
+imagem no grupo
